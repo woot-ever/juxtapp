@@ -1,0 +1,6 @@
+# use glob syntax
+syntax: glob
+
+obj/
+dist/
+lib/libstdc++.a
