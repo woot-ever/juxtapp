@@ -18,7 +18,6 @@
 #include "LuaGlue/LuaGlueSymTab.h"
 
 #include <csetjmp>
-#include "../PluginManager.hpp"
 
 template<typename _Class>
 class LuaGlueClass;
