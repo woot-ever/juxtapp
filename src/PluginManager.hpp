@@ -222,12 +222,12 @@ public:
 	
 	static unsigned int GetBuildVersion()
 	{
-		return 590;
+		return 591;//TODO: return real version
 	}
 	
 	static const char* GetVersion()
 	{
-		return "0.91A";
+		return "0.91A";//TODO: return real version
 	}
 	
 	static void Break()
