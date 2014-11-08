@@ -4,3 +4,4 @@ syntax: glob
 obj/
 dist/
 lib/libstdc++.a
+debug.sh
