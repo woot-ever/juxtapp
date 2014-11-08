@@ -11,7 +11,6 @@
 #include "LuaGlue/LuaGlue.h"
 
 #include "TheHTTP.hpp"
-#include "jsonxx.h"
 
 #include "globals.hpp"
 #include "JuxtaConfig.hpp"
@@ -235,13 +234,6 @@ public:
 	{
 		raise(SIGINT);
 	}
-	
-	static void GetPlayerInfo()
-	{
-		/*std::string str = DownloadText();
-		jsonxx::Object o;
-		o.parse(str);*/
-	}
 };
 std::vector<std::shared_ptr<ChatCommand>> ProxyKAG::chatCommands;
 std::vector<std::shared_ptr<ChatCommand>> ProxyKAG::oldChatCommands;
@@ -354,10 +346,7 @@ PluginManager::~PluginManager()
 
 void PluginManager::Init(const int v)
 {
-	//std::cout << "PluginManager::Init" << std::endl;
-	
 	this->version = v;
-	//this->LoadConfig();
 	this->LoadAll();
 	
 	this->workingDir = "../";
@@ -380,7 +369,6 @@ void PluginManager::LoadConfig()
 	std::ifstream infile(path);
 	if (infile.good())
 	{
-		std::cout << "FILE EXISTS, READ CONFIG "<< std::endl;
 		JuxtaConfig::Get()->Load(path.c_str());
 		JuxtaConfig::Get()->update_onserverstart = JuxtaConfig::Get()->GetBoolean("update_onserverstart", JuxtaConfig::Get()->update_onserverstart);
 		JuxtaConfig::Get()->update_onmatchend = JuxtaConfig::Get()->GetBoolean("update_onmatchend", JuxtaConfig::Get()->update_onmatchend);
@@ -388,7 +376,6 @@ void PluginManager::LoadConfig()
 		JuxtaConfig::Get()->speedhack_ban_duration = JuxtaConfig::Get()->GetNumber("speedhack_ban_duration", JuxtaConfig::Get()->speedhack_ban_duration);
 		JuxtaConfig::Get()->speedhack_max_attacks = JuxtaConfig::Get()->GetNumber("speedhack_max_attacks", JuxtaConfig::Get()->speedhack_max_attacks);
 		JuxtaConfig::Get()->enable_lua_sandbox = JuxtaConfig::Get()->GetBoolean("enable_lua_sandbox", JuxtaConfig::Get()->enable_lua_sandbox);
-		std::cout << "MAX WARNINGS = " << JuxtaConfig::Get()->speedhack_max_warnings << std::endl;
 		infile.close();
 	}
 	else
@@ -493,8 +480,6 @@ void PluginManager::UnloadAll()
 
 void PluginManager::ReloadAll()
 {
-	//std::cout << "PluginManager::ReloadAll" << std::endl;
-	
 	this->LoadConfig();
 	this->UnloadAll();
 	this->LoadAll();
@@ -657,7 +642,6 @@ bool PluginManager::OnPlayerAttack(std::shared_ptr<ProxyPlayer> player)
 		ret = p->state.invokeFunction<int>("OnPlayerAttack", player);
 		if (ret == 0)
 		{
-			//std::cout << "Plugin (" << p->name << ") cancelled OnPlayerAttack" << std::endl;
 			return false;
 		}
 	}
@@ -673,7 +657,6 @@ bool PluginManager::OnPlayerTalk(std::shared_ptr<ProxyPlayer> player, char* msg)
 		ret = p->state.invokeFunction<int>("OnPlayerTalk", player, (const char*)msg);
 		if (ret == 0)
 		{
-			//std::cout << "Plugin (" << p->name << ") cancelled OnPlayerTalk" << std::endl;
 			return false;
 		}
 	}
@@ -715,7 +698,6 @@ float PluginManager::OnPlayerHit(std::shared_ptr<ProxyPlayer> victim, std::share
 		float tmpdmg = p->state.invokeFunction<float>("OnPlayerHit", victim, attacker, damage);
 		if (tmpdmg == 0)
 		{
-			//std::cout << "Plugin (" << p->name << ") cancelled OnPlayerHit by returning 0 damage" << std::endl;
 			return 0;
 		}
 		else if (damageReturnedByPlugins == -1 || tmpdmg < damageReturnedByPlugins)
@@ -749,7 +731,6 @@ bool PluginManager::OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer> player, unsi
 		ret = p->state.invokeFunction<int>("OnPlayerChangeTeam", player);
 		if (ret == 0)
 		{
-			//std::cout << "Plugin (" << p->name << ") cancelled OnPlayerChangeTeam" << std::endl;
 			return false;
 		}
 	}
@@ -765,7 +746,6 @@ bool PluginManager::OnPlayerBuild(std::shared_ptr<ProxyPlayer> player, float x, 
 		ret = p->state.invokeFunction<int>("OnPlayerBuild", player, x, y, block);
 		if (ret == 0)
 		{
-			//std::cout << "Plugin (" << p->name << ") cancelled OnPlayerBuild" << std::endl;
 			return false;
 		}
 	}
@@ -810,7 +790,6 @@ bool PluginManager::OnMapReceiveTile(std::shared_ptr<ProxyPlayer> player, float 
 		ret = p->state.invokeFunction<int>("OnMapReceiveTile", player, x, y, block);
 		if (ret == 0)
 		{
-			//std::cout << "Plugin (" << p->name << ") cancelled OnMapReceiveTile" << std::endl;
 			return false;
 		}
 	}
@@ -901,40 +880,6 @@ bool PluginManager::ExecuteChatCommand(std::shared_ptr<ProxyPlayer> player, std:
 {
 	if (message.length() == 0) { return true; } // No message
 	if (message.substr(0, 1) != "/") { return true; } // Not a command
-	
-	/*
-	//std::vector<std::string> vmsg = split(message, ' ');
-	char seps[] = " ";
-	char *token;
-	token = strtok(&message[0], seps);
-	while(token != NULL)
-	{
-		token = strtok(NULL, seps);
-		std::cout << token << std::endl;
-	}
-	if (vmsg.size() == 0)
-	{
-		std::cout << ">> MESSAGE HAS NO COMMAND, WTF?" << std::endl;
-		return true;
-	}
-	std::string command = vmsg[0];
-	std::string args[16];
-	std::copy(vmsg.begin(), vmsg.end(), args);
-	bool ret = false;
-	for (auto it = ProxyKAG::chatCommands.begin(); it != ProxyKAG::chatCommands.end(); ++it)
-	{
-		if ((*it)->command == command)
-		{
-			std::cout << ">> EXEC CMD" << std::endl;
-			int arr[4];
-			arr[0] = 10;
-			arr[1] = 20;
-			arr[2] = 30;
-			arr[3] = 40;
-			(*it)->function(player, (arr));
-		}
-	}
-	*/
 	
 	std::vector<std::string> vmsg = split(message, ' ');
 	std::string command(vmsg[0]);
@@ -1083,7 +1028,6 @@ Plugin::Plugin(std::string name, std::string path)
 	.end();
 	
 	this->state.Class<ProxyPlayer>("Player")
-		//.ctor("new")
 		.method("GetID", &ProxyPlayer::GetID)
 		.method("GetName", &ProxyPlayer::GetName)
 		.method("GetClantag", &ProxyPlayer::GetClantag)

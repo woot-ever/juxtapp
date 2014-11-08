@@ -1,9 +1,6 @@
 #ifndef THEHTTP_HPP
 #define THEHTTP_HPP
 
-/**
-    C++ client example using sockets
-*/
 #include<sys/socket.h>    //socket
 #include<arpa/inet.h> //inet_addr
 #include<netdb.h> //hostent

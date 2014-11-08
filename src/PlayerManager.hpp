@@ -177,7 +177,7 @@ void PlayerManager::SpeedHackCheck(unsigned int pid)
 				sConsole_Print(oss.str().c_str());
 				if (warnings >= JuxtaConfig::Get()->speedhack_max_warnings)
 				{
-					//sPlayer_Ban(pp->cplayer, JuxtaConfig::Get()->speedhack_ban_duration);
+					sPlayer_Ban(pp->cplayer, JuxtaConfig::Get()->speedhack_ban_duration);
 				}
 			}
 		}
@@ -248,17 +248,6 @@ void PlayerManager::AddPlayer(std::shared_ptr<ProxyPlayer> player)
 
 void PlayerManager::RemovePlayer(std::shared_ptr<ProxyPlayer> player)
 {
-	/*for (std::list<ProxyPlayer*>::iterator it = this->players.begin(); it != this->players.end(); ++it)
-	{
-		if((*it)->GetID() == player->GetID())
-		{
-			delete *it;
-			*it = nullptr;
-			this->players.erase(it);
-			return;
-		}
-	}*/
-	//if (player == NULL) return;
 	this->players.erase(std::remove_if(this->players.begin(), this->players.end(), [](std::shared_ptr<ProxyPlayer> &p)
 	{
 		return !p->exists();

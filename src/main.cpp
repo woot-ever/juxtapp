@@ -17,12 +17,13 @@
 #include <time.h>
 #include <fstream>
 #include <complex>
+#include <unistd.h>
 
 #include "TheHTTP.hpp"
 
 #include "globals.hpp"
 #include "irrlicht/irrlicht.h"
-#include "enet/enet.h"
+//#include "enet/enet.h"
 #include "lua/lua.hpp"
 #include "lua/lauxlib.h"
 
@@ -1487,11 +1488,6 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 						}
 					}
 				}
-				//if ()
-				//{
-				//	sServer_MsgToPlayer(_sender,"YOUR NEW HEAD IS SET, NOW DIE U STUPID CUNT!");
-				//	heads_p[__id] = 0;
-				//}
 			
 				delete [] _message;
 			}
@@ -1510,17 +1506,13 @@ extern "C" int _ZN14CPlayerManager12RemovePlayerEP7CPlayer(void* pManager, void*
 {
 	unsigned int playerID = __CPlayerToID(CPlayer);
 	
-	/////////////
-	// PLUGINS //
-	/////////////
 	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
 	if (pp)
 	{
 		PluginManager::Get()->OnPlayerLeave(pp);
-		pp->_exists = false; // flag for deletion
+		pp->_exists = false; // flag the player for deletion
 		PlayerManager::Get()->RemovePlayer(pp);
 	}
-	/////////////
 	
 	player_names.erase(playerID);
 
@@ -1530,27 +1522,6 @@ extern "C" int _ZN14CPlayerManager12RemovePlayerEP7CPlayer(void* pManager, void*
 	
 	return o_ZN14CPlayerManager12RemovePlayerEP7CPlayer(pManager,CPlayer);
 }
-
-/*
-auto begin = std::chrono::high_resolution_clock::now();
-int frames = 0;
-extern "C" void _ZN6CRules5ThinkEv(void *that)
-{
-	auto end = std::chrono::high_resolution_clock::now();
-	long t = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
-	if (t >= 1000000000) //~1s
-	{
-		begin = end;
-		
-		for (Plugin *p : PluginManager::Get()->plugins)
-		{
-			if (!p->state.existVoidFunction("Test")) continue;
-			p->state.invokeVoidFunction("Test");
-		}
-	}
-	o_ZN6CRules5ThinkEv(that);
-}
-*/
 
 extern "C" int _ZN7CRunner5ThinkEv(CRunner* that)
 {
@@ -1564,6 +1535,7 @@ extern "C" int _ZN7CRunner5ThinkEv(CRunner* that)
 		PluginManager::Get()->OnPlayerTick(pp, pp->ticks);
 	}
 	
+	// Prevent the player from moving on server side if he is frozen
 	void* cplaye = __CRunnerToCPlayer(that);
 	if (cplaye)
 	{
@@ -1615,7 +1587,6 @@ extern "C" bool _ZN7CRunner10recdStrikeER10CBitStreamPS_(CRunner *that, CBitStre
 
 extern "C" int _ZN7CRunner6DoTickEv(CRunner* that)
 {
-	//std::cout << "DELTA!" << std::endl;
 	return o_ZN7CRunner6DoTickEv(that);
 }
 
@@ -1657,7 +1628,6 @@ void  sServer_RestartMatch()
 
 float _getdistance(float x1, float y1, float x2, float y2)
 {
-	// a2+b2=c2 lel
 	float a = abs(y2-y1); a*=a;
 	float b = abs(x2-x1); b*=b;
 	return sqrt(a+b);
@@ -1678,7 +1648,6 @@ extern "C" void _ZN7CRunner5BuildE5Vec2fh(CRunner *that, struct Vec2f pos, unsig
 
 // ----------------
 // FOR ONMAPCHANGE
-
 extern "C" void* _ZN4CMap7LoadMapEPKcb(void* that, char* mapname)
 {
 	if (!mapptr) mapptr = that;
@@ -1688,16 +1657,11 @@ extern "C" void* _ZN4CMap7LoadMapEPKcb(void* that, char* mapname)
 	return o_ZN4CMap7LoadMapEPKcb(that,mapname);
 }
 
-
-
-
-// returns player id ;_;
 DWORD sPlayer_GetID(void* CPlayer)
 {
 	return __CPlayerToID(CPlayer);
 }
 
-// returns player seclev number
 DWORD sPlayer_GetSeclev(void* CPlayer)
 {
 	if (CPlayer)
@@ -1774,19 +1738,15 @@ void sPlayer_SetName(void* CPlayer,const char* newname)
 	if (!CPlayer) return;
 	
 	String* nc = (String*)((DWORD)CPlayer+200);
-	
 	*nc = " ";
 	
 	String* nn = (String*)((DWORD)CPlayer+156);
-	
 	*nn = newname;
 	
 	String* ncn = (String*)((DWORD)CPlayer+244);
-	
 	*ncn = newname;
 	
 	//String* on = (String*)((DWORD)CPlayer+350);
-	
 	//*on = newname;
 	
 	//char* cn = *(char**)((DWORD)CPlayer+244);
@@ -1830,7 +1790,7 @@ char* sPlayer_GetIP(void* CPlayer)
 	return sIPresult;
 }
 
-// constructor of CSecurity
+// constructor of CSecurity singleton
 extern "C" void* _ZN9CSecurityC1Ev(void* that)
 {
 	void* result = o_ZN9CSecurityC1Ev(that);
@@ -1838,7 +1798,7 @@ extern "C" void* _ZN9CSecurityC1Ev(void* that)
 	return result;
 }
 
-// constructor of CNet
+// constructor of CNet singleton
 extern "C" void* _ZN4CNetC1Ev(void* that)
 {
 	void* result = o_ZN4CNetC1Ev(that);
@@ -1846,6 +1806,7 @@ extern "C" void* _ZN4CNetC1Ev(void* that)
 	return result;
 }
 
+// constructor of CScript singleton
 extern "C" void* _ZN7CScriptC1Ev(void* that)
 {
 	void* result = o_ZN7CScriptC1Ev(that);
@@ -1853,7 +1814,7 @@ extern "C" void* _ZN7CScriptC1Ev(void* that)
 	return result;
 }
 
-// constructor of IC_Console
+// constructor of IC_Console singleton
 extern "C" void* _ZN10IC_ConsoleC2Ev(void* that)
 {
 	void* result = o_ZN10IC_ConsoleC2Ev(that);
@@ -1868,13 +1829,11 @@ extern "C" int _ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream(void* 
 	return o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream(CNet,wut,CStatePump,CBitStream);
 }
 
-std::string ch_feature = "editor";
-		
 extern "C" int _ZN4CMap11recdMapTileER10CBitStream(void* CMap, void* CBitStream)
 {
 	void* pSender = __IDToCPlayer(_lastsenderid);
 	
-	bool allowed = _CSecurity__checkAccess_Feature(security_ptr,pSender,ch_feature);
+	bool allowed = _CSecurity__checkAccess_Feature(security_ptr,pSender, "editor");
 	
 	if (!allowed)
 	{
@@ -1885,22 +1844,19 @@ extern "C" int _ZN4CMap11recdMapTileER10CBitStream(void* CMap, void* CBitStream)
 		return 0;
 	}
 	
-	//_printCBitStream(CBitStream);
 	std::vector<unsigned char>* buffer = (std::vector<unsigned char>*)(CBitStream);
 	if (buffer)
 	{
 		DWORD bsize = buffer->size();
 		if (bsize >= 34)
 		{
-			unsigned int xy = 0;
-			xy = ((int)(buffer->at(29)) << 24) | ((int)(buffer->at(30)) << 16) | ((int)(buffer->at(31)) << 8) | (int)(buffer->at(32));
-			unsigned int x = xy % sMap_GetWidth();
-			unsigned int y = xy / sMap_GetWidth();
-			unsigned char block = (unsigned char)(buffer->at(33));
-			
 			std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(_lastsenderid);
 			if (pp)
 			{
+				unsigned int xy = ((int)(buffer->at(29)) << 24) | ((int)(buffer->at(30)) << 16) | ((int)(buffer->at(31)) << 8) | (int)(buffer->at(32));
+				unsigned int x = xy % sMap_GetWidth();
+				unsigned int y = xy / sMap_GetWidth();
+				unsigned char block = (unsigned char)(buffer->at(33));
 				if (!PluginManager::Get()->OnMapReceiveTile(pp, x, y, block)) return 0;
 			}
 		}
@@ -2027,9 +1983,6 @@ void sMap_SetTile(float x, float y, byte b_type)
 	if (mapptr)	_CMap__server_SetTile(mapptr,x,y,b_type);
 }
 
-// -----------------
-// FOR OTHER STUFF
-
 extern "C" String _ZN6CActor7getNameEv(void *that)
 {
 	return o_CActorGetName(that);
@@ -2037,7 +1990,6 @@ extern "C" String _ZN6CActor7getNameEv(void *that)
 
 extern "C" bool _ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc(void *that, CRunner* crunner, const char* cmd)
 {
-	//std::cout << "_ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc = " << cmd << std::endl;
 	unsigned int playerID = __CRunnerToID(crunner);
 	
 	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
@@ -2075,13 +2027,6 @@ extern "C" void _ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump(void *that, void
 	
 	o_ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump(that, cbitstream, cstatepump);
 }
-
-/*extern "C" void _ZN4CNet12CreateServerEv(void *that)
-{
-	std::cout << "HOOKED CNet::CreateServer(void)" << std::endl;
-	
-	o_CNetCreateServer(that);
-}*/
 
 extern "C" void _ZN10CWorldTask5StartEv(void *that)
 {
@@ -2130,26 +2075,17 @@ static	int	socket_family(__CONST_SOCKADDR_ARG sock) {
 }
 int accept(int sd,  __SOCKADDR_ARG sock, socklen_t* lenp)
 {
-	//std::cout << "ACCEPT" << std::endl;
 	fcntl(sd, F_SETFL, O_NONBLOCK); // set socket to non-blocking mode
-	//exit(4);
-	//close(sd);
-	//return -1;
 	/*
-	
 	int	stype	= socket_type (sd);
 	int	family	= socket_family ( *(__CONST_SOCKADDR_ARG*)(&sock));
 	std::cout << "stype=" << stype << std::endl;
 	std::cout << "family=" << family << std::endl;
 	
-	//raise(SIGINT);
-	//raise(SIGABRT);
-	//raise(SIGTRAP);
-
 	shutdown(sd, 2);
-	close(sd); //crash
+	//close(sd); //crash
 	errno = ECONNABORTED;
 	return -1;
-	//return -1;*/
+	*/
 	return o_accept(sd, sock, lenp);
 }

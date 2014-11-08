@@ -1,3 +1,5 @@
+#include "enet/enet.h"
+
 class CPlayerManager {
   public:
     irr::core::map<int, TeamList*> teams;

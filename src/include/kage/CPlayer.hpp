@@ -1,6 +1,7 @@
 #define FUCKING_SHIT unsigned int
 
 #include "CNetObject.hpp"
+#include "enet/enet.h"
 
 struct CPlayer : public CNetObject {
     FUCKING_SHIT peer;
