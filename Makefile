@@ -13,7 +13,7 @@ CC = g++
 #CFLAGS += -g -Wall -O2 --std=c++11 -Iinclude -static -static-libgcc -ldl -lm -lpthread -Llib -lstdc++ -llua -shared -fPIC
 #LDFLAGS += -g -Wall --std=c++11 -static -static-libgcc -ldl -lm -lpthread -Iinclude -Llib -lstdc++ -llua -shared -fPIC
 
-CPPFLAGS += -Wfatal-errors --std=c++11 -static -static-libgcc -ldl -lm -lpthread -Isrc/include -Lsrc/lib -llua -shared -fPIC
+CPPFLAGS += -Wfatal-errors --std=c++11 -static -static-libgcc -ldl -lm -lpthread -Isrc/include -Lsrc/lib -llua -lcurl -shared -fPIC
 
 OBJDIR=obj
 DISTDIR=dist

@@ -19,7 +19,8 @@
 #include <complex>
 #include <unistd.h>
 
-#include "TheHTTP.hpp"
+//#include "TheHTTP.hpp"
+#include <curl/curl.h>
 
 #include "globals.hpp"
 #include "irrlicht/irrlicht.h"
@@ -71,6 +72,69 @@ const int CURRENT_VERSION = 4;
 
 bool currdirinbase = false;
 
+size_t writer_file(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+	size_t written;
+	written = fwrite(ptr, size, nmemb, stream);
+	return written;
+}
+
+int writer(char *data, size_t size, size_t nmemb, std::string *buffer)
+{
+    int result = 0;
+    if (buffer != NULL)
+    {
+      buffer->append(data, size * nmemb);
+      result = size * nmemb;
+    }
+    return result;
+}
+
+bool DownloadBinary(std::string host, std::string saveto)
+{
+	FILE *fp;
+	CURL *curl;
+	CURLcode res;
+	curl = curl_easy_init();
+	if(curl) {
+		fp = fopen(saveto.c_str(), "wb");
+		curl_easy_setopt(curl, CURLOPT_URL, host.c_str());
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer_file);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+		res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
+		fclose(fp);
+		if(res == CURLE_OK) {
+			return true;
+		}
+		return false;
+	}
+	return true;
+}
+
+std::string DownloadText(std::string host)
+{
+	std::string buffer;
+	CURL *curl;
+	CURLcode res;
+	curl = curl_easy_init();
+	if(curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, host.c_str());
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+		res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
+		if(res == CURLE_OK) {
+			return buffer;
+		}
+		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+		return "";
+	}
+	return "";
+}
+
 void UpdateFile(const char* path, const char* webpath, const char* filename, bool forceUpdate)
 {
 	std::string filepath = std::string(currdirinbase ? "../" : "./") + std::string(path) + std::string(filename);
@@ -78,7 +142,7 @@ void UpdateFile(const char* path, const char* webpath, const char* filename, boo
     if (!f.good() || forceUpdate) {
 		f.close();
 		std::cout << "Downloading " << filename << " to " << filepath << " ..." << std::endl;
-		if (DownloadBinary("update.juxta.cf", std::string(std::string(webpath) + std::string(filename)).c_str(), filepath))
+		if (DownloadBinary(std::string("http://update.juxta.cf") + std::string(webpath) + std::string(filename), filepath))
 		{
 			std::cout << "Downloaded " << filename << std::endl;
 		}
@@ -99,7 +163,7 @@ void UpdateLibraries(bool forceUpdate)
 
 bool CheckForUpdates()
 {
-	int new_version = DownloadText("update.juxta.cf","version.txt");
+	int new_version = atoi(DownloadText("http://update.juxta.cf/version.txt").c_str());
 	if (new_version==-1)
 	{
 		std::cout << std::endl << "ERROR! CANNOT CHECK FOR JUXTA++ UPDATES!" << std::endl << std::endl;
@@ -115,7 +179,7 @@ bool CheckForUpdates()
 	{
 		std::cout << std::endl << "New Juxta++ version found! Updating..." << std::endl << std::endl;
 		std::string thesoname = currdirinbase ? "../juxtapp.so" : "juxtapp.so";
-		if (DownloadBinary("update.juxta.cf","files/linux/juxtapp.so",thesoname))
+		if (DownloadBinary("http://update.juxta.cf/files/linux/juxtapp.so",thesoname))
 		{
 			UpdateLibraries(true);
 			std::cout << std::endl << "New version of Juxta++ is ready!" << std::endl << std::endl;
@@ -1069,12 +1133,6 @@ void HookFunctions(void* handle)
 	detour(CNetFiles__SendFile,_ZN9CNetFiles8SendFileEPKchP9_ENetPeer,5);	
 	detour(CRunner__getMovementSignificance,_ZN7CRunner23getMovementSignificanceEv,6);		
 	detour(CNetworkTask__Start,_ZN12CNetworkTask5StartEv,5);
-	
-	//std::cout << "THE VERSION NUMBER IS: \"" << DownloadText("update.juxta.cf","version.txt") << "\" !\n\n\n\n";
-	
-	//_CCurl__DownloadFile = (_CCurl__DownloadFile_)o_dlsym(RTLD_DEFAULT,"_ZN5CCurl12DownloadFileEPKcS1_S1_i");
-	
-	//std::cout << std::endl << std::endl << "CCurl__DownloadFile - " << (void*)_CCurl__DownloadFile << std::endl << std::endl << std::endl << std::endl;
 	
 	hook(CNetworkTask__Stop,_ZN12CNetworkTask4StopEv);
 	hook(CScript__RunString,_ZN7CScript9RunStringEN3irr4core6stringIwNS1_12irrAllocatorIwEEEE);
