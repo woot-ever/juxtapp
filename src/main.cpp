@@ -162,7 +162,7 @@ static String (*o_CActorGetName)(void *) = 0;
 static int (*o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream)(void*, bool, void*, void*) = 0;
 static int (*o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer)(void*, void*, void*) = 0;
 static int (*o_ZN14CPlayerManager12RemovePlayerEP7CPlayer)(void*, void*) = 0;
-static int (*o_ZN4CMap11recdMapTileER10CBitStream)(void*,void*) = 0;
+static int (*o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer)(void*,void*,void*) = 0;
 static void* (*o_ZN9CSecurityC1Ev)(void*) = 0;
 static int (*o_ZN7CRunner6DoTickEv) (CRunner*) = 0;
 static void* (*o_ZN7CRunner5ThinkEv) (CRunner*) = 0;
@@ -1107,7 +1107,7 @@ void HookFunctions(void* handle)
 	o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream = (int(*)(void*,bool,void*,void*))o_dlsym(handle, "_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream");
 	o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer = (int(*)(void*,void*,void*))o_dlsym(handle, "_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer");
 	o_ZN14CPlayerManager12RemovePlayerEP7CPlayer = (int(*)(void*,void*))o_dlsym(handle, "_ZN14CPlayerManager12RemovePlayerEP7CPlayer");
-	o_ZN4CMap11recdMapTileER10CBitStream = (int(*)(void*, void*))o_dlsym(handle, "_ZN4CMap11recdMapTileER10CBitStream");
+	o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer = (int(*)(void*, void*, void*))o_dlsym(handle, "_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer");
 	o_ZN9CSecurityC1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN9CSecurityC1Ev");
 	o_ZN7CRunner6DoTickEv = (int(*)(CRunner*))o_dlsym(handle, "_ZN7CRunner6DoTickEv");
 	o_ZN7CRunner5ThinkEv = (void*(*)(CRunner*))o_dlsym(handle, "_ZN7CRunner5ThinkEv");
@@ -1829,10 +1829,9 @@ extern "C" int _ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream(void* 
 	return o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream(CNet,wut,CStatePump,CBitStream);
 }
 
-extern "C" int _ZN4CMap11recdMapTileER10CBitStream(void* CMap, void* CBitStream)
+extern "C" int _ZN4CMap11recdMapTileER10CBitStreamP7CPlayer(void* CMap, void* CBitStream, void* pSender)
 {
-	void* pSender = __IDToCPlayer(_lastsenderid);
-	
+	if (!pSender) return 0;
 	bool allowed = _CSecurity__checkAccess_Feature(security_ptr,pSender, "editor");
 	
 	if (!allowed)
@@ -1850,19 +1849,20 @@ extern "C" int _ZN4CMap11recdMapTileER10CBitStream(void* CMap, void* CBitStream)
 		DWORD bsize = buffer->size();
 		if (bsize >= 34)
 		{
-			std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(_lastsenderid);
+			std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(__CPlayerToID(pSender));
 			if (pp)
 			{
 				unsigned int xy = ((int)(buffer->at(29)) << 24) | ((int)(buffer->at(30)) << 16) | ((int)(buffer->at(31)) << 8) | (int)(buffer->at(32));
 				unsigned int x = xy % sMap_GetWidth();
 				unsigned int y = xy / sMap_GetWidth();
 				unsigned char block = (unsigned char)(buffer->at(33));
+				
 				if (!PluginManager::Get()->OnMapReceiveTile(pp, x, y, block)) return 0;
 			}
 		}
 	}
 	
-	return o_ZN4CMap11recdMapTileER10CBitStream(CMap,CBitStream);
+	return o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer(CMap,CBitStream,pSender);
 }
 
 // ---------------
