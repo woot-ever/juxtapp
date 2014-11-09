@@ -879,7 +879,6 @@ void PluginManager::OnServerStart()
 bool PluginManager::ExecuteChatCommand(std::shared_ptr<ProxyPlayer> player, std::string message)
 {
 	if (message.length() == 0) { return false; } // No message
-	if (message.substr(0, 1) != "/") { return false; } // Not a command
 	
 	std::vector<std::string> vmsg = split(message, ' ');
 	std::string command(vmsg[0]);
