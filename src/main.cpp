@@ -903,7 +903,6 @@ myfunc(int,CEgg__SendCatapult,void* dis, float x1, float y1, float x2, float y2,
 // ---------------
 myfunc(int,CPlayer__ChangeTeam,void* dis, DWORD team)
 {
-	//std::cout << "CHANGE TEAM!" << std::endl;
 	unsigned int playerID = __CPlayerToID(dis);
 	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
 	if (pp)
@@ -1460,24 +1459,26 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 						sServer_MsgToPlayer(_sender, oss.str().c_str());
 					}
 				}
-				if (do_send)
+				std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(__id);
+				if (pp)
 				{
-					// Check if there is a custom command set by a plugin
-					std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(__id);
-					if (pp)
+					if (do_send)
 					{
+						// Check if there is a custom command set by a plugin
 						if (PluginManager::Get()->ExecuteChatCommand(pp, _msg))
 						{
 							do_send = false; // Command exists, do not send chat message
 						}
+						else if (_msg.substr(0,1)=="/")
+						{
+							// No custom commands, but the message starts with "/", so do not send
+							pp->SendMessage(">> Command not found");
+							do_send = false;
+						}
 					}
-				}
-				if (do_send)
-				{
-					// Check what OnPlayerTalk returns
-					std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(__id);
-					if (pp)
+					if (do_send)
 					{
+						// Check what OnPlayerTalk returns
 						if (!PluginManager::Get()->OnPlayerTalk(pp, _message))
 						{
 							do_send = false; // Returned false, do not send chat message

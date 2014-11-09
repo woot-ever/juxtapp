@@ -897,11 +897,6 @@ bool PluginManager::ExecuteChatCommand(std::shared_ptr<ProxyPlayer> player, std:
 		}
 	}
 	
-	if (!commandExists)
-	{
-		player->SendMessage(">> Command not found");
-	}
-	
 	return commandExists;
 }
 
