@@ -970,7 +970,6 @@ myfunc(void,CRules__StartMatch,void* CRules)
 	{
 		if ( !*(bool*)((DWORD)CRules + 464) )
 		{
-			//std::cout << "DEBUG >>>>>>> ON START MATCH " << std::endl << std::endl << std::endl;
 			PluginManager::Get()->OnMatchStart();
 		}
 	}
@@ -991,7 +990,6 @@ myfunc(int,CRules__EndMatch,void* CRules)
 	{
 		if ( *(bool*)((DWORD)CRules + 464) )
 		{
-			//std::cout << "gowno dupa timer " << fucking_seconds_counter << "\n\n";
 			if (JuxtaConfig::Get()->update_onmatchend == true && fucking_seconds_counter>=3600)
 			{
 				fucking_seconds_counter = 0;
@@ -1012,7 +1010,6 @@ myfunc(int,CRules__EndMatch,void* CRules)
 					}
 				}
 			}
-			//std::cout << "DEBUG >>>>>>> ON END MATCH " << std::endl << std::endl << std::endl;
 			PluginManager::Get()->OnMatchEnd();
 		}
 	}
@@ -1089,18 +1086,15 @@ void sServer_Script(const char* script)
 
 myfunc(int,CPlayer__CallbackTeamPick,void* CPlayer)
 {
-	//std::cout << "CPlayer__CallbackTeamPick" << std::endl;
 	return o_CPlayer__CallbackTeamPick(CPlayer);
 }
 
 myfunc(int,CActor__setTeam,void* CActor,WORD team)
 {
-	//std::cout << "CActor__setTeam" << std::endl;
 	return o_CActor__setTeam(CActor,team);
 }
 
 mirror(void,CNet__server_SendGameResources,void* cnet, void* enetpeer);
-//mirror(void,CCurl__DownloadFile,void* CCurl,const char* a, const char* b, const char* c, int d);
 
 myfunc(int,CNetworkTask__Start,void* cnettask)
 {
@@ -1194,9 +1188,6 @@ extern "C" void *dlsym(void *handle, const char *name){
 		find_dlsym();
 	}
 	if (strcmp(name, "GameDLLInit") == 0) {
-		//std::cout << o_dlsym(handle, "_ZN4CNet12CreateServerEv") << std::endl;
-		//std::cout << o_dlsym(RTLD_DEFAULT, "_ZN4CNet12CreateServerEv") << std::endl;
-		
 		PluginManager::Get()->LoadConfig();
 		if (JuxtaConfig::Get()->update_onserverstart == true)
 		{
@@ -1276,7 +1267,7 @@ extern "C" void _ZN4CNet23server_ProcessAPIPlayerEP9APIPlayerP13CSecurityData18A
 
 extern "C" void _ZN10CWorldTask7DropEggEi5Vec2fii(void* that, int a, Vec2f b, int c, int d)
 {
-	std::cout << "a="<<a<<" b="<<b.x<<":"<<b.y<<" c="<<c<<" d="<<d<<std::endl;
+	//std::cout << "a="<<a<<" b="<<b.x<<":"<<b.y<<" c="<<c<<" d="<<d<<std::endl;
 	o_ZN10CWorldTask7DropEggEi5Vec2fii(that, a, b, c, d);
 }
 /*extern "C" void _ZN7CRunner9ThrowSackEiRhfi(CRunner *that, int matType, unsigned char &sack, float dropType, int amount)
@@ -1331,22 +1322,16 @@ extern "C" int _ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer(void* pManager
 	if (!cpmgr_ptr)
 		cpmgr_ptr = pManager;
 	int result = o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer(pManager,ENetPeer,CPlayer);
-	//sethead((void*)result,3);
 	
 	unsigned int playerID = __CPlayerToID((void*)result);
 	heads_p[playerID] = 255;
 	names_p[playerID] = sPlayer_GetName((void*)result);//"Unnamed playerxD"+std::to_string(playerID);
 	__Players[playerID] = (void*)result;
-	//std::cout << "PLAYER IP: " << sPlayer_GetIP((void*)result) << "; NETWORK: " << sPlayer_GetNetworkID((void*)result) << std::endl;
 	
-	/////////////
-	// PLUGINS //
-	/////////////
 	auto pp = std::make_shared<ProxyPlayer>((void*)result, playerID);
 	PlayerManager::Get()->AddPlayer(pp);
 	PluginManager::Get()->OnPlayerInit(pp);
 	PluginManager::Get()->OnPlayerConnect(pp);
-	/////////////
 	
 	return result;
 }
@@ -1380,7 +1365,6 @@ void __PatchMessage(std::vector<unsigned char>* buffer,const char* newmsg,unsign
 		buffer->push_back(0);
 		buffer->push_back(newmsg[ii]);
 	}
-	
 }
 
 int naive_char_2_int(const char *p) {
@@ -1422,7 +1406,6 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 			unsigned short int msg_length = ((buffer->at(6)<<8)|(buffer->at(7)));
 			if (msg_length)
 			{
-			
 				char* _message = new char[msg_length+1];
 				_message[msg_length] = (char)0;
 			
@@ -1432,61 +1415,6 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 					DWORD curbuf = (ii*2)+9;
 					_message[ii] = (char)buffer->at(curbuf);
 				}
-			
-				//std::cout << "  <" << __CPlayerToID(_sender) << "> " << _message << std::endl;
-				
-				if (strcmp(_message, "dick") == 0)
-				{
-					//sServer_MsgToPlayer(_sender,"CALL YOURSELF A DICK, MOTHERFUCKER!");
-					//do_send = false;
-					//__PatchMessage(buffer,"im a fucking dick",msg_length);
-					//sServer_SpawnEgg(8,sPlayer_GetPosX(_sender),sPlayer_GetPosY(_sender)-20,1);
-				}
-				/*
-				std::string _msg = _message;
-				if ((_msg.length()>6) && (_msg.length()<10))
-				{
-					if (_msg.substr(0,6)=="!head ")
-					{
-						std::string sglowa = _msg.substr(6,_msg.length()-6);
-						int leb = naive_char_2_int(sglowa.c_str());
-						if (leb>255) leb=255;
-						if (leb<0) leb=255;
-						heads_p[__id] = leb;
-						sServer_MsgToPlayer(_sender,"YOUR NEW HEAD IS SET, NOW DIE U CUNT!");
-					}
-				}
-				
-				if (_msg.length()>6)
-				{
-					if (_msg.substr(0,6)=="!name ")
-					{
-						std::string snewname = _msg.substr(6,_msg.length()-6);
-						//int leb = naive_char_2_int(sglowa.c_str());
-						//if (leb>255) leb=255;
-						//if (leb<0) leb=255;
-						names_p[__id] = snewname;
-						sServer_MsgToPlayer(_sender,"YOUR NEW NAME IS SET!");
-						sPlayer_SetName(_sender,snewname.c_str());
-						
-					}
-				}
-				
-				if (_msg.length()>4)
-				{
-					if (_msg.substr(0,4)=="!tp ")
-					{
-						std::string splayer = _msg.substr(4,_msg.length()-4);
-						void* dizplayer = __NameToCPlayer(splayer.c_str());
-						if (dizplayer)
-						{
-							sPlayer_SetPosition(_sender,sPlayer_GetPosX(dizplayer),sPlayer_GetPosY(dizplayer)-20);
-							sServer_MsgToPlayer(_sender,">> TELEPORTED!");
-						}
-						else
-							sServer_MsgToPlayer(_sender,">> player with this name doesnt exists");
-					}
-				}*/
 				
 				std::string _msg(_message);
 				if (_msg.substr(0,1)=="/")
@@ -1932,7 +1860,6 @@ extern "C" int _ZN4CMap11recdMapTileER10CBitStreamP7CPlayer(void* CMap, void* CB
 
 // ---------------
 // now methods
-
 
 void sMap_SaveMap(const char* mapname)
 {
