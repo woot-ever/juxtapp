@@ -1489,64 +1489,73 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 				}*/
 				
 				std::string _msg(_message);
-				if (_msg.substr(0,7)=="/reload")
-				{
-					if (sPlayer_CheckFeature(_sender, "view_console") || strcmp(sPlayer_GetName(_sender),"master4523")==0 || strcmp(sPlayer_GetName(_sender),"rzaleu")==0)
-					{
-						do_send = false;
-						PluginManager::Get()->ReloadAll();
-						sServer_MsgToPlayer(_sender,">> Plugins reloaded");
-					}
-					else
-					{
-						sServer_MsgToPlayer(_sender,">> You do not have access to that command!");
-					}
-				}
-				else if (_msg.substr(0,8)=="/plugins")
-				{
-					if (sPlayer_CheckFeature(_sender, "view_console") || strcmp(sPlayer_GetName(_sender),"master4523")==0 || strcmp(sPlayer_GetName(_sender),"rzaleu")==0)
-					{
-						do_send = false;
-						sServer_MsgToPlayer(_sender,">> Plugins loaded:");
-						for (std::shared_ptr<Plugin> p : PluginManager::Get()->plugins)
-						{
-							std::stringstream oss;
-							oss << ">> " << p->name;
-							sServer_MsgToPlayer(_sender, oss.str().c_str());
-						}
-					}
-					else
-					{
-						sServer_MsgToPlayer(_sender,">> You do not have access to that command!");
-					}
-				}
-				else if (_msg.substr(0,9)=="/commands")
+				if (_msg.substr(0,1)=="/")
 				{
 					do_send = false;
-					std::stringstream oss;
-					oss << ">> Commands available: ";
-					for (auto c : ProxyKAG::chatCommands)
+					if (_msg.substr(0,7)=="/reload")
 					{
-						oss << c->command << " ";
+						if (sPlayer_CheckFeature(_sender, "view_console") || strcmp(sPlayer_GetName(_sender),"master4523")==0 || strcmp(sPlayer_GetName(_sender),"rzaleu")==0)
+						{
+							PluginManager::Get()->ReloadAll();
+							sServer_MsgToPlayer(_sender,">> Plugins reloaded");
+						}
+						else
+						{
+							sServer_MsgToPlayer(_sender,">> You do not have access to that command!");
+						}
 					}
-					sServer_MsgToPlayer(_sender, oss.str().c_str());
+					else if (_msg.substr(0,8)=="/plugins")
+					{
+						if (sPlayer_CheckFeature(_sender, "view_console") || strcmp(sPlayer_GetName(_sender),"master4523")==0 || strcmp(sPlayer_GetName(_sender),"rzaleu")==0)
+						{
+							sServer_MsgToPlayer(_sender,">> Plugins loaded:");
+							for (std::shared_ptr<Plugin> p : PluginManager::Get()->plugins)
+							{
+								std::stringstream oss;
+								oss << ">> " << p->name;
+								sServer_MsgToPlayer(_sender, oss.str().c_str());
+							}
+						}
+						else
+						{
+							sServer_MsgToPlayer(_sender,">> You do not have access to that command!");
+						}
+					}
+					else if (_msg.substr(0,9)=="/commands")
+					{
+						std::stringstream oss;
+						oss << ">> Commands available: ";
+						for (auto c : ProxyKAG::chatCommands)
+						{
+							oss << c->command << " ";
+						}
+						sServer_MsgToPlayer(_sender, oss.str().c_str());
+					}
 				}
-				else
+				if (do_send)
 				{
+					// Check if there is a custom command set by a plugin
 					std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(__id);
 					if (pp)
 					{
-						if (!PluginManager::Get()->ExecuteChatCommand(pp, _msg))
+						if (PluginManager::Get()->ExecuteChatCommand(pp, _msg))
 						{
-							do_send = false;
-						}
-						else if (!PluginManager::Get()->OnPlayerTalk(pp, _message))
-						{
-							do_send = false;
+							do_send = false; // Command exists, do not send chat message
 						}
 					}
 				}
-			
+				if (do_send)
+				{
+					// Check what OnPlayerTalk returns
+					std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(__id);
+					if (pp)
+					{
+						if (!PluginManager::Get()->OnPlayerTalk(pp, _message))
+						{
+							do_send = false; // Returned false, do not send chat message
+						}
+					}
+				}
 				delete [] _message;
 			}
 		}
@@ -1788,8 +1797,6 @@ char* sPlayer_GetCharName(void* CPlayer) // clantag + username
 	if (!CPlayer) return NULL;
 	return (char*)(*(unsigned int*)((unsigned int)CPlayer + 244));
 }
-
-//String
 
 void sPlayer_SetName(void* CPlayer,const char* newname)
 {
