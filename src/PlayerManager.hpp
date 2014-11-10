@@ -78,8 +78,7 @@ public:
 	unsigned short int GetCoins() { return sPlayer_GetCoins(this->cplayer); }
 	unsigned short int GetScore() { return sPlayer_GetScore(this->cplayer);  }
 	
-	void SetX(float x) {  }
-	void SetY(float y) {  }
+	void SetClantag(const char* s) { sPlayer_SetClantag(this->cplayer, s); }
 	void SetTeam(int t) { sPlayer_ChangeTeam(this->cplayer, t); }
 	void SetPosition(float x, float y) { sPlayer_SetPosition(this->cplayer, x, y); }
 	void SetHealth(float health) { sPlayer_SetHealth(this->cplayer, health); }

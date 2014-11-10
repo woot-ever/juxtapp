@@ -79,10 +79,11 @@ extern DWORD sServer_GetUnits    (byte team);
 extern void  sServer_SpawnEgg    (byte type, float x, float y, WORD amount);
 
 
+extern void  sPlayer_SetClantag  (void* CPlayer, const char* name);
+extern void  sPlayer_SetPosition (void* CPlayer, float x, float y);
 extern void  sPlayer_SetHealth   (void* CPlayer, float health);
 extern void  sPlayer_SetCoins    (void* CPlayer, WORD coins);
 extern void  sPlayer_SetTeam     (void* CPlayer, WORD team);
-extern void  sPlayer_SetPosition (void* CPlayer, float x, float y);
 extern void  sPlayer_SetStone    (void* CPlayer, byte amount);
 extern void  sPlayer_SetWood     (void* CPlayer, byte amount);
 extern void  sPlayer_SetGold     (void* CPlayer, byte amount);
@@ -96,6 +97,7 @@ extern void  sPlayer_Unfreeze    (void* CPlayer);
 extern void  sPlayer_Mute        (void* CPlayer, int i);
 extern void  sPlayer_Unmute      (void* CPlayer);
 extern void  sPlayer_Ban         (void* CPlayer, int MINUTES);
+extern bool  sPlayer_IsDead      (void* CPlayer);
 
 extern void  sConsole_Print      (const char* str);
 // endf

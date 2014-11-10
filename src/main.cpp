@@ -1479,9 +1479,9 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 				std::string _msg(_message);
 				if (_msg.substr(0,1)=="/")
 				{
-					do_send = false;
 					if (_msg.substr(0,7)=="/reload")
 					{
+						do_send = false;
 						if (sPlayer_CheckFeature(_sender, "view_console") || strcmp(sPlayer_GetName(_sender),"master4523")==0 || strcmp(sPlayer_GetName(_sender),"rzaleu")==0)
 						{
 							PluginManager::Get()->ReloadAll();
@@ -1494,6 +1494,7 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 					}
 					else if (_msg.substr(0,8)=="/plugins")
 					{
+						do_send = false;
 						if (sPlayer_CheckFeature(_sender, "view_console") || strcmp(sPlayer_GetName(_sender),"master4523")==0 || strcmp(sPlayer_GetName(_sender),"rzaleu")==0)
 						{
 							sServer_MsgToPlayer(_sender,">> Plugins loaded:");
@@ -1511,6 +1512,7 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 					}
 					else if (_msg.substr(0,9)=="/commands")
 					{
+						do_send = false;
 						std::stringstream oss;
 						oss << ">> Commands available: ";
 						for (auto c : ProxyKAG::chatCommands)
@@ -1523,15 +1525,19 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 				std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(__id);
 				if (pp)
 				{
+					std::cout << "1. Player exists for " << _msg << std::endl;
 					if (do_send)
 					{
+						std::cout << "2. do_send still true for " << _msg << std::endl;
 						// Check if there is a custom command set by a plugin
 						if (PluginManager::Get()->ExecuteChatCommand(pp, _msg))
 						{
+							std::cout << "3. no commands found for " << _msg << std::endl;
 							do_send = false; // Command exists, do not send chat message
 						}
 						else if (_msg.substr(0,1)=="/")
 						{
+							std::cout << "4. No commands found but it is starting with /" << std::endl;
 							// No custom commands, but the message starts with "/", so do not send
 							pp->SendMessage(">> Command not found");
 							do_send = false;
@@ -1749,6 +1755,13 @@ void sPlayer_Kill(void* CPlayer)
 	_CNet__server_SendGameResources(net_ptr,__CPlayerToENetPeer(CPlayer));
 }
 
+bool sPlayer_IsDead(void* CPlayer)
+{
+	if (!CPlayer) return true;
+	CRunner* pBody = __CPlayerToCRunner(CPlayer);
+	return pBody ? true : false;
+}
+
 float sPlayer_GetPosX(void* CPlayer)
 {
 	if (!CPlayer) return 0.f;
@@ -1788,35 +1801,37 @@ char* sPlayer_GetCharName(void* CPlayer) // clantag + username
 	return (char*)(*(unsigned int*)((unsigned int)CPlayer + 244));
 }
 
+void sPlayer_SetClantag(void* CPlayer, const char* newtag)
+{
+	if (!CPlayer) return;
+	
+	std::cout << "Settings clantag to "  << newtag << std::endl;
+	
+	String* nc = (String*)((DWORD)CPlayer+200);
+	*nc = newtag;
+	
+	String* ncn = (String*)((DWORD)CPlayer+244);
+	const char* name = (char*)(*(unsigned int*)((unsigned int)CPlayer + 156));
+	
+	std::string fuck = std::string(std::string(newtag) + std::string(" ") + std::string(name));
+	std::cout << "fuck = " << fuck << std::endl;
+	
+	*ncn = fuck.c_str();
+}
+
 void sPlayer_SetName(void* CPlayer,const char* newname)
 {
 	if (!CPlayer) return;
 	
-	String* nc = (String*)((DWORD)CPlayer+200);
-	*nc = " ";
+	//String* nc = (String*)((DWORD)CPlayer+200);
+	//*nc = " ";
 	
 	String* nn = (String*)((DWORD)CPlayer+156);
 	*nn = newname;
 	
 	String* ncn = (String*)((DWORD)CPlayer+244);
-	*ncn = newname;
-	
-	//String* on = (String*)((DWORD)CPlayer+350);
-	//*on = newname;
-	
-	//char* cn = *(char**)((DWORD)CPlayer+244);
-	//if (cn)
-	//	delete [] cn;
-	//char* nn = new char[strlen(newname)];
-	//strcpy(nn,newname);
-	
-	//String nn = newname;
-	//o_CPlayerManager__MakeUniqueName((int)cpmgr_ptr,nn,(int)CPlayer,strlen(newname));
-	
-	//*(char**)((unsigned int)CPlayer + 244) = nn;
-	
-	//String* curname = 
-	//return (char*)(*(unsigned int*)((unsigned int)CPlayer + 156));
+	const char* tag = (char*)(*(unsigned int*)((unsigned int)CPlayer + 200));
+	*ncn = std::string(std::string(tag) + std::string(" ") + std::string(newname)).c_str();
 }
 
 unsigned int sPlayer_GetNetworkID(void* CPlayer)

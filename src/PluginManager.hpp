@@ -1048,6 +1048,8 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetCoins", &ProxyPlayer::GetCoins)
 		.method("GetScore", &ProxyPlayer::GetScore)
 		
+		.method("SetClantag", &ProxyPlayer::SetClantag)
+		//.method("SetName", &ProxyPlayer::SetName)
 		.method("SetPosition", &ProxyPlayer::SetPosition)
 		.method("SetTeam", &ProxyPlayer::SetTeam)
 		.method("SetHealth", &ProxyPlayer::SetHealth)
