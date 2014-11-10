@@ -72,14 +72,7 @@ const int CURRENT_VERSION = 4;
 
 bool currdirinbase = false;
 
-size_t writer_file(void *ptr, size_t size, size_t nmemb, FILE *stream)
-{
-	size_t written;
-	written = fwrite(ptr, size, nmemb, stream);
-	return written;
-}
-
-int writer(char *data, size_t size, size_t nmemb, std::string *buffer)
+int writer_string(char *data, size_t size, size_t nmemb, std::string *buffer)
 {
     int result = 0;
     if (buffer != NULL)
@@ -92,25 +85,33 @@ int writer(char *data, size_t size, size_t nmemb, std::string *buffer)
 
 bool DownloadBinary(std::string host, std::string saveto)
 {
-	FILE *fp;
+	std::cout << "DownloadBinary(\"" << host << "\", \"" << saveto << "\");" << std::endl;
+	FILE *fp = 0;
 	CURL *curl;
 	CURLcode res;
 	curl = curl_easy_init();
 	if(curl) {
 		fp = fopen(saveto.c_str(), "wb");
-		curl_easy_setopt(curl, CURLOPT_URL, host.c_str());
-		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer_file);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-		res = curl_easy_perform(curl);
-		curl_easy_cleanup(curl);
-		fclose(fp);
-		if(res == CURLE_OK) {
-			return true;
+		if (fp) {
+			curl_easy_setopt(curl, CURLOPT_URL, host.c_str());
+			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+			curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+			res = curl_easy_perform(curl);
+			curl_easy_cleanup(curl);
+			fclose(fp);
+			if(res == CURLE_OK) {
+				return true;
+			} else {
+				std::cout << "download failed!" << std::endl;
+			}
+			return false;
+		} else {
+			std::cout << "fopen failed!" << std::endl;
 		}
-		return false;
+	} else {
+		std::cout << "curl_easy_init failed!" << std::endl;
 	}
-	return true;
+	return false;
 }
 
 std::string DownloadText(std::string host)
@@ -122,7 +123,7 @@ std::string DownloadText(std::string host)
 	if(curl) {
 		curl_easy_setopt(curl, CURLOPT_URL, host.c_str());
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer_string);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
@@ -142,7 +143,7 @@ void UpdateFile(const char* path, const char* webpath, const char* filename, boo
     if (!f.good() || forceUpdate) {
 		f.close();
 		std::cout << "Downloading " << filename << " to " << filepath << " ..." << std::endl;
-		if (DownloadBinary(std::string("http://update.juxta.cf") + std::string(webpath) + std::string(filename), filepath))
+		if (DownloadBinary(std::string("http://update.juxta.cf/") + std::string(webpath) + std::string(filename), filepath))
 		{
 			std::cout << "Downloaded " << filename << std::endl;
 		}
@@ -1079,6 +1080,13 @@ bool sPlayer_CheckCommand(void* CPlayer, const char* command)
 	return _CSecurity__checkAccess_Command(security_ptr,CPlayer,thecommand);
 }
 
+mirror(void*,CMap__SetDayTime,void* cmap, float t);
+
+void sMap_SetDayTime(float t)
+{
+	_CMap__SetDayTime(mapptr, t);
+}
+
 mirror(void*,CWorldTask__DropEgg,void* cworldtask, byte style, float x, float y, char idk, WORD amount);
 
 void sServer_SpawnEgg(byte type, float x, float y, WORD amount)
@@ -1147,6 +1155,7 @@ void HookFunctions(void* handle)
 	hook(CSecurity__checkAccess_Command,_ZN9CSecurity19checkAccess_CommandEP7CPlayerSsb);
 	hook(CRules__unitsLeftForTeam,_ZN6CRules16unitsLeftForTeamEh);
 	//hook(CPlayerManager__CastVote,_ZN14CPlayerManager8CastVoteEhtPKw);
+	hook(CMap__SetDayTime,_ZN4CMap10SetDayTimeEf);
 	hook(CMap__getTile,_ZN4CMap7getTileE5Vec2f);
 	hook(CMap__server_SetTile,_ZN4CMap14server_SetTileE5Vec2fh);
 	hook(CMap__setWaterLevel,_ZN4CMap13setWaterLevelEi);
@@ -1525,19 +1534,15 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 				std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(__id);
 				if (pp)
 				{
-					std::cout << "1. Player exists for " << _msg << std::endl;
 					if (do_send)
 					{
-						std::cout << "2. do_send still true for " << _msg << std::endl;
 						// Check if there is a custom command set by a plugin
 						if (PluginManager::Get()->ExecuteChatCommand(pp, _msg))
 						{
-							std::cout << "3. no commands found for " << _msg << std::endl;
 							do_send = false; // Command exists, do not send chat message
 						}
 						else if (_msg.substr(0,1)=="/")
 						{
-							std::cout << "4. No commands found but it is starting with /" << std::endl;
 							// No custom commands, but the message starts with "/", so do not send
 							pp->SendMessage(">> Command not found");
 							do_send = false;
@@ -1805,18 +1810,12 @@ void sPlayer_SetClantag(void* CPlayer, const char* newtag)
 {
 	if (!CPlayer) return;
 	
-	std::cout << "Settings clantag to "  << newtag << std::endl;
-	
 	String* nc = (String*)((DWORD)CPlayer+200);
 	*nc = newtag;
 	
 	String* ncn = (String*)((DWORD)CPlayer+244);
 	const char* name = (char*)(*(unsigned int*)((unsigned int)CPlayer + 156));
-	
-	std::string fuck = std::string(std::string(newtag) + std::string(" ") + std::string(name));
-	std::cout << "fuck = " << fuck << std::endl;
-	
-	*ncn = fuck.c_str();
+	*ncn = std::string(std::string(newtag) + std::string(" ") + std::string(name)).c_str();
 }
 
 void sPlayer_SetName(void* CPlayer,const char* newname)
