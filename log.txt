@@ -1,6 +1,0 @@
-Building on release mode
-..........................
-rm -f -r obj dist
-mkdir -p obj
-mkdir -p dist
-g++ src/main.cpp -g -Wall -O2 --std=c++11 -static -static-libgcc -ldl -lm -lpthread -Isrc/include -Lsrc/lib -llua -shared -fPIC -o dist/libJuxtapp.so

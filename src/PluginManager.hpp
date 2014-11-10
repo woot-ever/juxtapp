@@ -444,6 +444,8 @@ void PluginManager::UnloadAll()
 		}
 	}
 	
+	this->pluginsOnPlayerTalk.clear();
+	this->pluginsOnPlayerAttack.clear();
 	this->pluginsOnPlayerDie.clear();
 	this->pluginsOnPlayerTick.clear();
 	this->pluginsOnPlayerHit.clear();
@@ -457,7 +459,6 @@ void PluginManager::UnloadAll()
 	this->pluginsOnPlayerConnect.clear();
 	this->pluginsOnPlayerJoin.clear();
 	this->pluginsOnPlayerLeave.clear();
-	this->pluginsOnPlayerAttack.clear();
 	this->pluginsOnMatchStart.clear();
 	this->pluginsOnMatchEnd.clear();
 	this->pluginsOnMapChange.clear();

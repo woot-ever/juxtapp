@@ -244,6 +244,11 @@ static void* (*o_ZN4CMap7InitMapEv) (void*) = 0;
 static void* (*o_ZN4CNet23server_ProcessAPIPlayerEP9APIPlayerP13CSecurityData18APIRequestStatus_t) (void*, APIPlayer*, void*, int) = 0;
 static void* (*o_ZN7CRunner9ThrowSackEiRhfi) (CRunner*, int, unsigned char &, float, int) = 0;
 static void* (*o_ZN10CWorldTask7DropEggEi5Vec2fii) (void*, int, Vec2f, int, int) = 0;
+//static void* (*o_ZN14CPlayerManager8CastVoteEhtPKw) (void*, irr::u8, irr::u16, const wchar_t *) = 0;
+static void* (*o_ZN4CEgg5MountEP6CActor) (void*, void*) = 0;
+static void* (*o_ZN4CEgg7UnMountEP6CActor) (void*, void*) = 0;
+static void* (*o_ZN7CRunner5MountEP6CActor) (void*, void*) = 0;
+static void* (*o_ZN7CRunner7UnMountEP6CActor) (void*, void*) = 0;
 static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (CRunner*, CBitStream&, CRunner*) = 0;
 static int (*o_accept) (int, struct sockaddr*, socklen_t*) = 0;
 
@@ -333,8 +338,6 @@ void *DetourFunc( void *src, void *dst, const int len )
 
 CRunner* __CPlayerToCRunner(void* rpointer);
 unsigned int __CPlayerToID(void* rpointer);
-
-
 
 void sethead(void* CPlayer, byte num)
 {
@@ -508,7 +511,7 @@ std::map <unsigned int, void*> __Players;
 
 // -----------------------------
 // standard conversion functions
-unsigned int __CRunnerToID(CRunner* rpointer)
+unsigned int __CRunnerToID(void* rpointer)
 {
 	unsigned int PlayerPTR = *(unsigned int*)((unsigned int)rpointer+220);
 	return PlayerPTR ? (*(unsigned short int*)(PlayerPTR+120)) : 0;
@@ -519,7 +522,7 @@ unsigned int __CPlayerToID(void* rpointer)
 	return rpointer ? (*(unsigned short int*)((unsigned int)rpointer+120)) : 0;
 }
 
-void* __CRunnerToCPlayer(CRunner* rpointer)
+void* __CRunnerToCPlayer(void* rpointer)
 {
 	return (void*)(*(unsigned int*)((unsigned int)rpointer+220));
 }
@@ -827,6 +830,15 @@ struct FLYING_CATA
 // CATAPULT - STRUCT
 std::map<void*,FLYING_CATA> catas;
 
+/*myfunc(int,CPlayerManager__CastVote, void* dis, irr::u8 a, irr::u16 b, const wchar_t * c)
+{
+	std::cout << "WOOT CAST VOTE" << std::endl;
+	std::cout << "a = " << (int)a << std::endl;
+	std::cout << "b = " << b << std::endl;
+	std::cout << "c = " << c << std::endl;
+	return o_CPlayerManager__CastVote(dis, a, b, c);
+}*/
+
 myfunc(int,CRunner__UpdateVisuals,CRunner* tBody)
 {
 	return o_CRunner__UpdateVisuals(tBody);
@@ -1040,6 +1052,7 @@ myfunc(int,CRules__Think,void* CRules)
 }
 
 mirror(DWORD,CRules__unitsLeftForTeam,void* CRules,byte team);
+//mirror(int,CPlayerManager__CastVote,void* CPlayerManager, irr::u8 a, irr::u16 b, const wchar_t * c);
 
 DWORD sServer_GetUnits(byte team)
 {
@@ -1126,12 +1139,14 @@ void HookFunctions(void* handle)
 	detour(CNetFiles__SendFile,_ZN9CNetFiles8SendFileEPKchP9_ENetPeer,5);	
 	detour(CRunner__getMovementSignificance,_ZN7CRunner23getMovementSignificanceEv,6);		
 	detour(CNetworkTask__Start,_ZN12CNetworkTask5StartEv,5);
+	//detour(CPlayerManager__CastVote,_ZN14CPlayerManager8CastVoteEhtPKw,5);
 	
 	hook(CNetworkTask__Stop,_ZN12CNetworkTask4StopEv);
 	hook(CScript__RunString,_ZN7CScript9RunStringEN3irr4core6stringIwNS1_12irrAllocatorIwEEEE);
 	hook(CWorldTask__DropEgg,_ZN10CWorldTask7DropEggEi5Vec2fii);
 	hook(CSecurity__checkAccess_Command,_ZN9CSecurity19checkAccess_CommandEP7CPlayerSsb);
 	hook(CRules__unitsLeftForTeam,_ZN6CRules16unitsLeftForTeamEh);
+	//hook(CPlayerManager__CastVote,_ZN14CPlayerManager8CastVoteEhtPKw);
 	hook(CMap__getTile,_ZN4CMap7getTileE5Vec2f);
 	hook(CMap__server_SetTile,_ZN4CMap14server_SetTileE5Vec2fh);
 	hook(CMap__setWaterLevel,_ZN4CMap13setWaterLevelEi);
@@ -1177,6 +1192,11 @@ void HookFunctions(void* handle)
 	o_ZN10CWorldTask7DropEggEi5Vec2fii = (void*(*)(void*, int, Vec2f, int, int))o_dlsym(handle, "_ZN10CWorldTask7DropEggEi5Vec2fii");
 	o_ZN7CRunner10recdStrikeER10CBitStreamPS_ = (bool(*)(CRunner*, CBitStream&, CRunner*))o_dlsym(handle, "_ZN7CRunner10recdStrikeER10CBitStreamPS_");
 	o_accept = (int(*)(int, struct sockaddr*, socklen_t*))o_dlsym(handle, "accept");
+	//o_ZN14CPlayerManager8CastVoteEhtPKw = (void*(*)(void*, irr::u8, irr::u16, const wchar_t *))o_dlsym(handle, "_ZN14CPlayerManager8CastVoteEhtPKw");
+	o_ZN4CEgg5MountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN4CEgg5MountEP6CActor");
+	o_ZN4CEgg7UnMountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN4CEgg7UnMountEP6CActor");
+	o_ZN7CRunner5MountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN7CRunner5MountEP6CActor");
+	o_ZN7CRunner7UnMountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN7CRunner7UnMountEP6CActor");
 	
 	// Initialize plugin manager
 	PluginManager::Get()->Init(CURRENT_VERSION);
@@ -1269,6 +1289,47 @@ extern "C" void _ZN10CWorldTask7DropEggEi5Vec2fii(void* that, int a, Vec2f b, in
 	//std::cout << "a="<<a<<" b="<<b.x<<":"<<b.y<<" c="<<c<<" d="<<d<<std::endl;
 	o_ZN10CWorldTask7DropEggEi5Vec2fii(that, a, b, c, d);
 }
+
+extern "C" void _ZN7CRunner5MountEP6CActor(void* that, void* actor)
+{
+	//std::cout << "_ZN7CRunner5MountEP6CActor = " << __CRunnerToID(that) << " mounted the flag"  << std::endl;
+	
+	//std::wstring toast(L"Testing test");
+	//const wchar_t* szToast = toast.c_str();
+	//_CPlayerManager__CastVote(cpmgr_ptr, __CRunnerToID(that), __CRunnerToID(that), szToast);
+	
+	o_ZN7CRunner5MountEP6CActor(that, actor);
+}
+
+extern "C" void _ZN7CRunner7UnMountEP6CActor(void* that, void* actor)
+{
+	//std::cout << "_ZN7CRunner7UnMountEP6CActor = " << __CRunnerToID(that) << " unmounted the flag"  << std::endl;
+	o_ZN7CRunner7UnMountEP6CActor(that, actor);
+}
+
+extern "C" void _ZN4CEgg5MountEP6CActor(void* that, void* actor)
+{
+	//std::cout << "_ZN4CEgg5MountEP6CActor = flag mounted by " << __CPlayerToID(actor) << std::endl;
+	o_ZN4CEgg5MountEP6CActor(that, actor);
+}
+
+extern "C" void _ZN4CEgg7UnMountEP6CActor(void* that, void* actor)
+{
+	//std::cout << "_ZN4CEgg7UnMountEP6CActor = flag unmoutned by " << __CPlayerToID(actor) << std::endl;
+	o_ZN4CEgg7UnMountEP6CActor(that, actor);
+}
+
+/*
+extern "C" void _ZN14CPlayerManager8CastVoteEhtPKw(void* that, irr::u8 a, irr::u16 b, const wchar_t * c)
+{
+	std::cout << "_ZN14CPlayerManager8CastVoteEhtPKw" << std::endl;
+	std::cout << "a = " << (int)a << std::endl;
+	std::cout << "b = " << b << std::endl;
+	std::cout << "c = " << c << std::endl;
+	o_ZN14CPlayerManager8CastVoteEhtPKw(that, a, b, c);
+}
+*/
+
 /*extern "C" void _ZN7CRunner9ThrowSackEiRhfi(CRunner *that, int matType, unsigned char &sack, float dropType, int amount)
 {
 	//std::cout << "matType="<<matType<<" sack="<<(int)sack<<" c="<<c << " amount=" << amount << std::endl;
