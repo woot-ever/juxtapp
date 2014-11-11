@@ -37,6 +37,7 @@ extern DWORD sMap_GetTile        (float x, float y);
 extern void  sMap_SetTile        (float x, float y, byte b_type);
 extern DWORD sMap_GetWidth       ();
 extern DWORD sMap_GetHeight      ();
+extern float sMap_GetDayTime     ();
 extern void  sMap_SetDayTime     (float t);
 
 extern void  sServer_MsgToPlayer (void* CPlayer, const char* msg);

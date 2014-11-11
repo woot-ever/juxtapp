@@ -1080,6 +1080,13 @@ bool sPlayer_CheckCommand(void* CPlayer, const char* command)
 	return _CSecurity__checkAccess_Command(security_ptr,CPlayer,thecommand);
 }
 
+mirror(float,CMap__getDayTime,void* cmap);
+
+float sMap_GetDayTime()
+{
+	return _CMap__getDayTime(mapptr);
+}
+
 mirror(void*,CMap__SetDayTime,void* cmap, float t);
 
 void sMap_SetDayTime(float t)
@@ -1155,6 +1162,7 @@ void HookFunctions(void* handle)
 	hook(CSecurity__checkAccess_Command,_ZN9CSecurity19checkAccess_CommandEP7CPlayerSsb);
 	hook(CRules__unitsLeftForTeam,_ZN6CRules16unitsLeftForTeamEh);
 	//hook(CPlayerManager__CastVote,_ZN14CPlayerManager8CastVoteEhtPKw);
+	hook(CMap__getDayTime,_ZN4CMap7getTimeEv);
 	hook(CMap__SetDayTime,_ZN4CMap10SetDayTimeEf);
 	hook(CMap__getTile,_ZN4CMap7getTileE5Vec2f);
 	hook(CMap__server_SetTile,_ZN4CMap14server_SetTileE5Vec2fh);

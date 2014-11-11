@@ -180,9 +180,14 @@ public:
 		return sMap_GetHeight();
 	}
 	
+	static float GetDayTime()
+	{
+		return sMap_GetDayTime();
+	}
+	
 	static void SetDayTime(float t)
 	{
-		return sMap_SetDayTime(t);
+		sMap_SetDayTime(t);
 	}
 	
 	static void SetTile(float x, float y, char b_type)
@@ -1112,6 +1117,7 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("SaveMap", &ProxyKAG::SaveMap)
 		.method("TriggerAutoBalance", &ProxyKAG::TriggerAutoBalance)
 		.method("SetDayTime", &ProxyKAG::SetDayTime)
+		.method("GetDayTime", &ProxyKAG::GetDayTime)
 		.method("GetUnitsLeft", &ProxyKAG::GetUnitsLeft)
 		.method("IsWarmup", &ProxyKAG::IsWarmup)
 		.method("SpawnEgg", &ProxyKAG::SpawnEgg)
