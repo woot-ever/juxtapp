@@ -251,6 +251,7 @@ static void* (*o_ZN4CEgg7UnMountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner5MountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner7UnMountEP6CActor) (void*, void*) = 0;
 static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (CRunner*, CBitStream&, CRunner*) = 0;
+static void (*o_ZN4CNet18server_SendRespawnEjP9_ENetPeer) (void*, unsigned int, void*) = 0;
 static int (*o_accept) (int, struct sockaddr*, socklen_t*) = 0;
 
 // detour xD
@@ -1208,6 +1209,7 @@ void HookFunctions(void* handle)
 	o_ZN7CRunner9ThrowSackEiRhfi = (void*(*)(CRunner*, int, unsigned char &, float, int))o_dlsym(handle, "_ZN7CRunner9ThrowSackEiRhfi");
 	o_ZN10CWorldTask7DropEggEi5Vec2fii = (void*(*)(void*, int, Vec2f, int, int))o_dlsym(handle, "_ZN10CWorldTask7DropEggEi5Vec2fii");
 	o_ZN7CRunner10recdStrikeER10CBitStreamPS_ = (bool(*)(CRunner*, CBitStream&, CRunner*))o_dlsym(handle, "_ZN7CRunner10recdStrikeER10CBitStreamPS_");
+	o_ZN4CNet18server_SendRespawnEjP9_ENetPeer = (void(*)(void*, unsigned int, void*))o_dlsym(handle, "_ZN4CNet18server_SendRespawnEjP9_ENetPeer");
 	o_accept = (int(*)(int, struct sockaddr*, socklen_t*))o_dlsym(handle, "accept");
 	//o_ZN14CPlayerManager8CastVoteEhtPKw = (void*(*)(void*, irr::u8, irr::u16, const wchar_t *))o_dlsym(handle, "_ZN14CPlayerManager8CastVoteEhtPKw");
 	o_ZN4CEgg5MountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN4CEgg5MountEP6CActor");
@@ -1639,6 +1641,14 @@ extern "C" void _ZN4CMap7InitMapEv(void *that)
 
 // ----------------
 unsigned int _lastsenderid = 0;
+
+extern "C" void _ZN4CNet18server_SendRespawnEjP9_ENetPeer(void* that, unsigned int a, void* b)
+{
+	//std::cout << "_ZN4CNet18server_SendRespawnEjP9_ENetPeer" << std::endl;
+	//a = 3000;
+	//std::cout << "a = " << a << std::endl;
+	return o_ZN4CNet18server_SendRespawnEjP9_ENetPeer(that, a, b);
+}
 
 extern "C" bool _ZN7CRunner10recdStrikeER10CBitStreamPS_(CRunner *that, CBitStream& a, CRunner* b)
 {
