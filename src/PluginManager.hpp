@@ -10,8 +10,6 @@
 #define LUAGLUE_TYPECHECK 1
 #include "LuaGlue/LuaGlue.h"
 
-//#include "TheHTTP.hpp"
-
 #include "globals.hpp"
 #include "JuxtaConfig.hpp"
 #include "PlayerManager.hpp"

@@ -19,7 +19,6 @@
 #include <complex>
 #include <unistd.h>
 
-//#include "TheHTTP.hpp"
 #include <curl/curl.h>
 
 #include "globals.hpp"
@@ -45,13 +44,7 @@ struct APIPlayer {
     APIPlayer(void);
 };
 
-#include "kage/Singleton.hpp"
-#include "kage/CBadassPtr.hpp"
 #include "kage/Vec2f.hpp"
-#include "kage/CRunner.hpp"
-#include "kage/CWorldTask.hpp"
-#include "kage/CInventoryActor.hpp"
-#include "kage/CActor.hpp"
 
 ////////////////////////////////////////////
 #include "PluginManager.hpp"
@@ -229,28 +222,28 @@ static int (*o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer)(void*, void*, 
 static int (*o_ZN14CPlayerManager12RemovePlayerEP7CPlayer)(void*, void*) = 0;
 static int (*o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer)(void*,void*,void*) = 0;
 static void* (*o_ZN9CSecurityC1Ev)(void*) = 0;
-static int (*o_ZN7CRunner6DoTickEv) (CRunner*) = 0;
-static void* (*o_ZN7CRunner5ThinkEv) (CRunner*) = 0;
+static int (*o_ZN7CRunner6DoTickEv) (void*) = 0;
+static void* (*o_ZN7CRunner5ThinkEv) (void*) = 0;
 static void* (*o_ZN4CNetC1Ev)(void*) = 0;
 static void* (*o_ZN7CScriptC1Ev)(void*) = 0;
 static void* (*o_ZN4CNet15ServerSendToAllER10CBitStream) (void*,DWORD) = 0;
 static void* (*o_ZN10IC_ConsoleC2Ev) (void*) = 0;
 static int (*o_ZN14CPlayerManager14MakeUniqueName) (int,int,int,int,int) = 0;
-static bool (*o_ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc) (void*, CRunner*, const char*) = 0;
+static bool (*o_ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc) (void*, void*, const char*) = 0;
 static void* (*o_ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump) (void*, void*, void*) = 0;
 static void* (*o_ZN10CWorldTask5StartEv) (void*) = 0;
 static void* (*o_ZN6CRules5ThinkEv) (void*) = 0;
 static void* (*o_ZN4CMap7LoadMapEPKcb) (void*, char*) = 0;
 static void* (*o_ZN4CMap7InitMapEv) (void*) = 0;
 static void* (*o_ZN4CNet23server_ProcessAPIPlayerEP9APIPlayerP13CSecurityData18APIRequestStatus_t) (void*, APIPlayer*, void*, int) = 0;
-static void* (*o_ZN7CRunner9ThrowSackEiRhfi) (CRunner*, int, unsigned char &, float, int) = 0;
+static void* (*o_ZN7CRunner9ThrowSackEiRhfi) (void*, int, unsigned char &, float, int) = 0;
 static void* (*o_ZN10CWorldTask7DropEggEi5Vec2fii) (void*, int, Vec2f, int, int) = 0;
 //static void* (*o_ZN14CPlayerManager8CastVoteEhtPKw) (void*, irr::u8, irr::u16, const wchar_t *) = 0;
 static void* (*o_ZN4CEgg5MountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN4CEgg7UnMountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner5MountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner7UnMountEP6CActor) (void*, void*) = 0;
-static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (CRunner*, CBitStream&, CRunner*) = 0;
+static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (void*, void*&, void*) = 0;
 static void (*o_ZN4CNet18server_SendRespawnEjP9_ENetPeer) (void*, unsigned int, void*) = 0;
 static int (*o_accept) (int, struct sockaddr*, socklen_t*) = 0;
 
@@ -290,10 +283,10 @@ typedef int (*_CMap__setWaterLevel_) (void* CMap, int);
 typedef int (*_CMap__SetTile_) (void* CMap, float x, float y, unsigned char type);
 typedef int (*_CSecurity__checkAccess_Feature_) (void* CSecurity, void* CPlayer, std::string);
 typedef int (*_CSecurity__getPlayerSeclev_) (void* CSecurity, void* CPlayer);
-typedef int (*_CRunner__Kill_) (CRunner* runner);
-typedef int (*_CRunner__Gib_) (CRunner* runner);
+typedef int (*_CRunner__Kill_) (void* runner);
+typedef int (*_CRunner__Gib_) (void* runner);
 typedef int (*_CNet__server_SendRespawn_) (void* CNet, unsigned int sumtim, void* ENetPeer);
-typedef int (*_CRunner__setPosition_) (CRunner* runner, float x, float y);
+typedef int (*_CRunner__setPosition_) (void* runner, float x, float y);
 //typedef int (*_CPlayer__ChangeTeam_) (void* player, WORD team);
 typedef int (*_CNet__server_SendMsg_) (void* CNet, WideString wchar_string, void* ENetPeer, byte wut);
 typedef int (*_CNet__server_SendSecurityCheck_) (void* CNet, void* ENetPeer);
@@ -338,7 +331,7 @@ void *DetourFunc( void *src, void *dst, const int len )
     return ( jmp - len );
 }
 
-CRunner* __CPlayerToCRunner(void* rpointer);
+void* __CPlayerToCRunner(void* rpointer);
 unsigned int __CPlayerToID(void* rpointer);
 
 void sethead(void* CPlayer, byte num)
@@ -400,67 +393,28 @@ int my_CNetFiles__SendFile(int a, const char* b, int c, int d)
 typedef int (*o_CPlayerManager__MakeUniqueName_) (int,String,int,int);
 o_CPlayerManager__MakeUniqueName_ o_CPlayerManager__MakeUniqueName = NULL;
 
-// a3 - name
-
-std::map<int,int> heads_p;
-std::map<int,std::string> names_p;
-
 #define mExists(m,a) ( m.find(a) != m.end() )
 
-std::map<int,std::string> player_names;
 int my_CPlayerManager__MakeUniqueName(int a1, String a2, int a3, int a4)
 {
 	int iid = __CPlayerToID((void*)a3);
 	int result = 0;
 	if (iid>0)
 	{
-		if (strcmp(sPlayer_GetName((void*)a3),"rzaleu")==0)
+		std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(iid);
+		if (pp)
 		{
-			sethead((void*)a3,3);
-		}
-		if (!mExists(player_names,iid))
-		{
-			player_names[iid] = sPlayer_GetName((void*)a3);
-			
-			std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(iid);
-			pp->playing = true;
-			if (pp)
+			if (!pp->playing)
 			{
+				pp->playing = true;
 				PluginManager::Get()->OnPlayerJoin(pp);
 			}
 		}
-		//if (mExists(names_p,iid))
-		//{
-		//std::string* sname = (std::string*)&a2;
-		////sethead((void*)a3,heads_p[iid]);
-		//char* sname = (char*)(*(DWORD*)(a2));
-		
-		//char* newname = new char[names_p[iid].length()];
-		//strcpy(newname,names_p[iid].c_str());
-		//newname = names_p[iid].c_str();
-		////a2 = names_p[iid].c_str();
-		//std::string tename = std::string(a2.c_str());
-		//std::cout << "NAME IS: '" << tename << "' !" << std::endl;
-		//String ttname = "unnamedd";
-		
-		//String* tempname = &a2;
-		//std::cout << "asdf - " << a2.c_str() << std::endl;
-		//std::cout << "asdf2 - " << *tempname << std::endl;
-		
-		//return o_CPlayerManager__MakeUniqueName(a1,a2,a3,a4);
-		
-		//delete [] newname;
-		//}
-		//else
-		//	result = o_CPlayerManager__MakeUniqueName(a1,a2,a3,a4);
-		//std::cout << "HIS NAME: '" << sname << "' !" << std::endl;
-		
 	}
 	return o_CPlayerManager__MakeUniqueName(a1,a2,a3,a4);
 }
 
-
-bool __lmb_(CRunner* dat)
+bool __lmb_(void* dat)
 {
 	return (*(bool*)(((unsigned int)dat)+737));
 }
@@ -508,7 +462,7 @@ void _patchdelta(void* cbitstream, float x, float y, float vx, float vy)
 	//std::cout << "PATCHED" << std::endl;
 }
 
-//   ID            CPlayer
+// ID, CPlayer
 std::map <unsigned int, void*> __Players;
 
 // -----------------------------
@@ -534,15 +488,15 @@ void* __IDToCPlayer(unsigned int rID)
 	return (__Players.find(rID) == __Players.end()) ? NULL : __Players[rID];
 }
 
-CRunner* __CPlayerToCRunner(void* rpointer)
+void* __CPlayerToCRunner(void* rpointer)
 {
-	return (CRunner*)(*(unsigned int*)((unsigned int)rpointer+304));
+	return (void*)(*(unsigned int*)((unsigned int)rpointer+304));
 }
 
-CRunner* __IDToCRunner(unsigned int rID)
+void* __IDToCRunner(unsigned int rID)
 {
 	void* rpointer = __IDToCPlayer(rID);
-	return rpointer ? (CRunner*)(*(unsigned int*)((unsigned int)rpointer+304)) : (CRunner*)NULL;
+	return rpointer ? (void*)(*(unsigned int*)((unsigned int)rpointer+304)) : (void*)NULL;
 }
 
 void* __NameToCPlayer(const char* name)
@@ -563,7 +517,7 @@ bool spawne = false;
 int my_CPlayer__Send_Delta(void* CPlayer, void* b1, void* b2, void* b3)
 {
 	//void* retadrr = __builtin_return_address(0);
-	CRunner* cplay = __CPlayerToCRunner(CPlayer);
+	void* cplay = __CPlayerToCRunner(CPlayer);
 	if (cplay)
 	{
 		//_patchdelta(b2,100,100,0,0);
@@ -583,7 +537,7 @@ int my_CPlayer__Send_Delta(void* CPlayer, void* b1, void* b2, void* b3)
 }
 
 float dxx = 100;
-int my_CRunner__Send_Delta(CRunner* pRunner, void* b1, void* b2, void* b3)
+int my_CRunner__Send_Delta(void* pRunner, void* b1, void* b2, void* b3)
 {
 	//_printCBitStream(b2);
 	//std::cout << "CRunner->SendDelta()" << std::endl;
@@ -606,7 +560,7 @@ int my_CRunner__Send_Delta(CRunner* pRunner, void* b1, void* b2, void* b3)
 	return o_CRunner__Send_Delta(pRunner,b1,b2,b3);
 }
 
-typedef bool (*o_CRunner__getMovementSignificance_) (CRunner*);
+typedef bool (*o_CRunner__getMovementSignificance_) (void*);
 o_CRunner__getMovementSignificance_ o_CRunner__getMovementSignificance = NULL;
 
 struct TP_rza
@@ -617,9 +571,9 @@ struct TP_rza
 	float vy;
 };
 
-std::map<CRunner*, TP_rza> TPs;
+std::map<void*, TP_rza> TPs;
 
-bool my_CRunner__getMovementSignificance(CRunner* tBody)
+bool my_CRunner__getMovementSignificance(void* tBody)
 {
 	bool result = o_CRunner__getMovementSignificance(tBody);
 	
@@ -668,7 +622,7 @@ bool my_CRunner__getMovementSignificance(CRunner* tBody)
 
 void sPlayer_SetPosition(void* CPlayer, float x, float y)
 {
-	CRunner* tBody = __CPlayerToCRunner(CPlayer);
+	void* tBody = __CPlayerToCRunner(CPlayer);
 	if (tBody)
 	{
 		TPs[tBody].x = x;
@@ -687,7 +641,7 @@ void sPlayer_SetPosition(void* CPlayer, float x, float y)
 void sPlayer_SetStone(void* CPlayer, byte amount)
 {
 	if (!CPlayer) return;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(byte *)((DWORD)_r + 800) = amount;
 }
@@ -695,7 +649,7 @@ void sPlayer_SetStone(void* CPlayer, byte amount)
 void sPlayer_SetWood(void* CPlayer, byte amount)
 {
 	if (!CPlayer) return;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(byte *)((DWORD)_r + 801) = amount;
 }
@@ -703,7 +657,7 @@ void sPlayer_SetWood(void* CPlayer, byte amount)
 void sPlayer_SetGold(void* CPlayer, byte amount)
 {
 	if (!CPlayer) return;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(byte *)((DWORD)_r + 802) = amount;
 }
@@ -711,7 +665,7 @@ void sPlayer_SetGold(void* CPlayer, byte amount)
 void sPlayer_SetArrows(void* CPlayer, byte amount)
 {
 	if (!CPlayer) return;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(byte*)((DWORD)_r + 803) = amount;
 }
@@ -719,21 +673,21 @@ void sPlayer_SetArrows(void* CPlayer, byte amount)
 byte sPlayer_GetStone(void* CPlayer)
 {
 	if (!CPlayer) return 0;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	return (_r) ? *(byte*)((DWORD)_r + 800) : 0;
 }
 
 float sPlayer_GetHealth(void* CPlayer)
 {
 	if (!CPlayer) return 0;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	return (_r) ? *(float*)((DWORD)_r + 196) : 0;
 }
 
 void sPlayer_SetHealth(void* CPlayer, float health)
 {
 	if (!CPlayer) return;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(float *)((DWORD)_r + 196) = health;
 }
@@ -741,35 +695,35 @@ void sPlayer_SetHealth(void* CPlayer, float health)
 byte sPlayer_GetWood(void* CPlayer)
 {
 	if (!CPlayer) return 0;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	return (_r) ? *(byte*)((DWORD)_r + 801) : 0;
 }
 
 byte sPlayer_GetGold(void* CPlayer)
 {
 	if (!CPlayer) return 0;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	return (_r) ? *(byte*)((DWORD)_r + 802) : 0;
 }
 
 byte sPlayer_GetArrows(void* CPlayer)
 {
 	if (!CPlayer) return 0;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	return (_r) ? *(byte*)((DWORD)_r + 803) : 0;
 }
 
 byte sPlayer_GetBombs(void* CPlayer)
 {
 	if (!CPlayer) return 0;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	return (_r) ? *(byte*)((DWORD)_r + 804) : 0;
 }
 
 void sPlayer_SetBombs(void* CPlayer, byte amount)
 {
 	if (!CPlayer) return;
-	CRunner* _r = __CPlayerToCRunner(CPlayer);
+	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(byte *)((DWORD)_r + 804) = amount;
 }
@@ -796,10 +750,10 @@ void* my_CNetCreateServer(void* that)
 	//raise(SIGINT);
 	return o_CNetCreateServer(that);
 }
-typedef int (*o_CRunner__onHit_) (CRunner* dis, float x1, float y1, float x2, float y2, float sumtin, CRunner* p2, int s2, int s3);
+typedef int (*o_CRunner__onHit_) (void* dis, float x1, float y1, float x2, float y2, float sumtin, void* p2, int s2, int s3);
 o_CRunner__onHit_ o_CRunner__onHit = NULL;
 
-int my_CRunner__onHit(CRunner* dis, float x1, float y1, float x2, float y2, float damage, CRunner* who, int s2, int s3)
+int my_CRunner__onHit(void* dis, float x1, float y1, float x2, float y2, float damage, void* who, int s2, int s3)
 {
 	unsigned int victimID = __CRunnerToID(dis);
 	std::shared_ptr<ProxyPlayer> pVictim = PlayerManager::Get()->GetPlayerByID(victimID);
@@ -841,7 +795,7 @@ std::map<void*,FLYING_CATA> catas;
 	return o_CPlayerManager__CastVote(dis, a, b, c);
 }*/
 
-myfunc(int,CRunner__UpdateVisuals,CRunner* tBody)
+myfunc(int,CRunner__UpdateVisuals,void* tBody)
 {
 	return o_CRunner__UpdateVisuals(tBody);
 }
@@ -873,7 +827,7 @@ myfunc(byte,CEgg__getMovementSignificance,void* dis)
 	/*byte style = *(byte*)((DWORD)dis+488);
 	if (style==7)
 	{
-		CRunner* sitter = (CRunner*)(*(DWORD*)((DWORD)dis+240));
+		void* sitter = (void*)(*(DWORD*)((DWORD)dis+240));
 		byte style1 = *(byte*)((DWORD)dis+488);
 		
 		if (sitter)
@@ -1193,22 +1147,22 @@ void HookFunctions(void* handle)
 	o_ZN14CPlayerManager12RemovePlayerEP7CPlayer = (int(*)(void*,void*))o_dlsym(handle, "_ZN14CPlayerManager12RemovePlayerEP7CPlayer");
 	o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer = (int(*)(void*, void*, void*))o_dlsym(handle, "_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer");
 	o_ZN9CSecurityC1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN9CSecurityC1Ev");
-	o_ZN7CRunner6DoTickEv = (int(*)(CRunner*))o_dlsym(handle, "_ZN7CRunner6DoTickEv");
-	o_ZN7CRunner5ThinkEv = (void*(*)(CRunner*))o_dlsym(handle, "_ZN7CRunner5ThinkEv");
+	o_ZN7CRunner6DoTickEv = (int(*)(void*))o_dlsym(handle, "_ZN7CRunner6DoTickEv");
+	o_ZN7CRunner5ThinkEv = (void*(*)(void*))o_dlsym(handle, "_ZN7CRunner5ThinkEv");
 	o_ZN4CNetC1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN4CNetC1Ev");
 	o_ZN7CScriptC1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN7CScriptC1Ev");
 	o_ZN4CNet15ServerSendToAllER10CBitStream = (void*(*)(void*,DWORD))o_dlsym(handle, "_ZN4CNet15ServerSendToAllER10CBitStream");
 	o_ZN10IC_ConsoleC2Ev = (void*(*)(void*))o_dlsym(handle, "_ZN10IC_ConsoleC2Ev");
 	o_ZN14CPlayerManager14MakeUniqueName = (int(*)(int,int,int,int,int))o_dlsym(handle, "_ZN14CPlayerManager14MakeUniqueNameERN3irr4core6stringIcNS1_12irrAllocatorIcEEEEP7CPlayerib");
-	o_ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc = (bool(*)(void*, CRunner*, const char*))o_dlsym(handle, "_ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc");
+	o_ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc = (bool(*)(void*, void*, const char*))o_dlsym(handle, "_ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc");
 	o_ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump = (void*(*)(void*, void*, void*))o_dlsym(handle, "_ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump");
 	o_ZN10CWorldTask5StartEv = (void*(*)(void*))o_dlsym(handle, "_ZN10CWorldTask5StartEv");
 	o_ZN6CRules5ThinkEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CRules5ThinkEv");
 	o_ZN4CMap7InitMapEv = (void*(*)(void*))o_dlsym(handle, "_ZN4CMap7InitMapEv");
 	o_ZN4CNet23server_ProcessAPIPlayerEP9APIPlayerP13CSecurityData18APIRequestStatus_t = (void*(*)(void*, APIPlayer*, void*, int))o_dlsym(handle, "_ZN4CNet23server_ProcessAPIPlayerEP9APIPlayerP13CSecurityData18APIRequestStatus_t");
-	o_ZN7CRunner9ThrowSackEiRhfi = (void*(*)(CRunner*, int, unsigned char &, float, int))o_dlsym(handle, "_ZN7CRunner9ThrowSackEiRhfi");
+	o_ZN7CRunner9ThrowSackEiRhfi = (void*(*)(void*, int, unsigned char &, float, int))o_dlsym(handle, "_ZN7CRunner9ThrowSackEiRhfi");
 	o_ZN10CWorldTask7DropEggEi5Vec2fii = (void*(*)(void*, int, Vec2f, int, int))o_dlsym(handle, "_ZN10CWorldTask7DropEggEi5Vec2fii");
-	o_ZN7CRunner10recdStrikeER10CBitStreamPS_ = (bool(*)(CRunner*, CBitStream&, CRunner*))o_dlsym(handle, "_ZN7CRunner10recdStrikeER10CBitStreamPS_");
+	o_ZN7CRunner10recdStrikeER10CBitStreamPS_ = (bool(*)(void*, void*&, void*))o_dlsym(handle, "_ZN7CRunner10recdStrikeER10CBitStreamPS_");
 	o_ZN4CNet18server_SendRespawnEjP9_ENetPeer = (void(*)(void*, unsigned int, void*))o_dlsym(handle, "_ZN4CNet18server_SendRespawnEjP9_ENetPeer");
 	o_accept = (int(*)(int, struct sockaddr*, socklen_t*))o_dlsym(handle, "accept");
 	//o_ZN14CPlayerManager8CastVoteEhtPKw = (void*(*)(void*, irr::u8, irr::u16, const wchar_t *))o_dlsym(handle, "_ZN14CPlayerManager8CastVoteEhtPKw");
@@ -1349,7 +1303,7 @@ extern "C" void _ZN14CPlayerManager8CastVoteEhtPKw(void* that, irr::u8 a, irr::u
 }
 */
 
-/*extern "C" void _ZN7CRunner9ThrowSackEiRhfi(CRunner *that, int matType, unsigned char &sack, float dropType, int amount)
+/*extern "C" void _ZN7CRunner9ThrowSackEiRhfi(void *that, int matType, unsigned char &sack, float dropType, int amount)
 {
 	//std::cout << "matType="<<matType<<" sack="<<(int)sack<<" c="<<c << " amount=" << amount << std::endl;
 	//dropType=0 drop from mining
@@ -1403,8 +1357,6 @@ extern "C" int _ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer(void* pManager
 	int result = o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer(pManager,ENetPeer,CPlayer);
 	
 	unsigned int playerID = __CPlayerToID((void*)result);
-	heads_p[playerID] = 255;
-	names_p[playerID] = sPlayer_GetName((void*)result);//"Unnamed playerxD"+std::to_string(playerID);
 	__Players[playerID] = (void*)result;
 	
 	auto pp = std::make_shared<ProxyPlayer>((void*)result, playerID);
@@ -1501,7 +1453,7 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 					if (_msg.substr(0,7)=="/reload")
 					{
 						do_send = false;
-						if (sPlayer_CheckFeature(_sender, "view_console") || strcmp(sPlayer_GetName(_sender),"master4523")==0 || strcmp(sPlayer_GetName(_sender),"rzaleu")==0)
+						if (sPlayer_CheckFeature(_sender, "view_console"))
 						{
 							PluginManager::Get()->ReloadAll();
 							sServer_MsgToPlayer(_sender,">> Plugins reloaded");
@@ -1514,7 +1466,7 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 					else if (_msg.substr(0,8)=="/plugins")
 					{
 						do_send = false;
-						if (sPlayer_CheckFeature(_sender, "view_console") || strcmp(sPlayer_GetName(_sender),"master4523")==0 || strcmp(sPlayer_GetName(_sender),"rzaleu")==0)
+						if (sPlayer_CheckFeature(_sender, "view_console"))
 						{
 							sServer_MsgToPlayer(_sender,">> Plugins loaded:");
 							for (std::shared_ptr<Plugin> p : PluginManager::Get()->plugins)
@@ -1591,17 +1543,12 @@ extern "C" int _ZN14CPlayerManager12RemovePlayerEP7CPlayer(void* pManager, void*
 		pp->_exists = false; // flag the player for deletion
 		PlayerManager::Get()->RemovePlayer(pp);
 	}
-	
-	player_names.erase(playerID);
-
-	heads_p.erase(playerID);
-	names_p.erase(playerID);
 	__Players.erase(playerID);
 	
 	return o_ZN14CPlayerManager12RemovePlayerEP7CPlayer(pManager,CPlayer);
 }
 
-extern "C" int _ZN7CRunner5ThinkEv(CRunner* that)
+extern "C" int _ZN7CRunner5ThinkEv(void* that)
 {
 	unsigned int playerID = __CRunnerToID(that);
 	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
@@ -1650,7 +1597,7 @@ extern "C" void _ZN4CNet18server_SendRespawnEjP9_ENetPeer(void* that, unsigned i
 	return o_ZN4CNet18server_SendRespawnEjP9_ENetPeer(that, a, b);
 }
 
-extern "C" bool _ZN7CRunner10recdStrikeER10CBitStreamPS_(CRunner *that, CBitStream& a, CRunner* b)
+extern "C" bool _ZN7CRunner10recdStrikeER10CBitStreamPS_(void *that, void*& a, void* b)
 {
 	if (JuxtaConfig::Get()->speedhack_max_warnings > -1)
 	{
@@ -1671,7 +1618,7 @@ extern "C" bool _ZN7CRunner10recdStrikeER10CBitStreamPS_(CRunner *that, CBitStre
 	return o_ZN7CRunner10recdStrikeER10CBitStreamPS_(that, a, b);
 }
 
-extern "C" int _ZN7CRunner6DoTickEv(CRunner* that)
+extern "C" int _ZN7CRunner6DoTickEv(void* that)
 {
 	return o_ZN7CRunner6DoTickEv(that);
 }
@@ -1719,7 +1666,7 @@ float _getdistance(float x1, float y1, float x2, float y2)
 	return sqrt(a+b);
 }
 
-extern "C" void _ZN7CRunner5BuildE5Vec2fh(CRunner *that, struct Vec2f pos, unsigned char block)
+extern "C" void _ZN7CRunner5BuildE5Vec2fh(void *that, struct Vec2f pos, unsigned char block)
 {
 	float rangebuild = _getdistance(pos.x,pos.y,sPlayer_GetPosX(__CRunnerToCPlayer(that)),sPlayer_GetPosY(__CRunnerToCPlayer(that)));
 	if (rangebuild > 50) return;
@@ -1772,7 +1719,7 @@ unsigned char sPlayer_GetTeam(void* CPlayer)
 void sPlayer_Kill(void* CPlayer)
 {
 	if (!CPlayer) return;
-	CRunner* temp = __CPlayerToCRunner(CPlayer);
+	void* temp = __CPlayerToCRunner(CPlayer);
 	if (!net_ptr) return;
 	if (temp) _CRunner__Kill(temp);
 	_CNet__server_SendGameResources(net_ptr,__CPlayerToENetPeer(CPlayer));
@@ -1781,29 +1728,29 @@ void sPlayer_Kill(void* CPlayer)
 bool sPlayer_IsDead(void* CPlayer)
 {
 	if (!CPlayer) return true;
-	CRunner* pBody = __CPlayerToCRunner(CPlayer);
+	void* pBody = __CPlayerToCRunner(CPlayer);
 	return pBody ? true : false;
 }
 
 float sPlayer_GetPosX(void* CPlayer)
 {
 	if (!CPlayer) return 0.f;
-	CRunner* pBody = __CPlayerToCRunner(CPlayer);
-	return pBody ? pBody->pos.x : 0.f;
+	void* pBody = __CPlayerToCRunner(CPlayer);
+	return pBody ? (*(Vec2f*)((unsigned int)pBody+620)).x : 0.f;
 }
 
 float sPlayer_GetPosY(void* CPlayer)
 {
 	if (!CPlayer) return 0.f;
-	CRunner* pBody = __CPlayerToCRunner(CPlayer);
-	return pBody ? pBody->pos.y : 0.f;
+	void* pBody = __CPlayerToCRunner(CPlayer);
+	return pBody ? (*(Vec2f*)((unsigned int)pBody+620)).y : 0.f;
 }
 
 char sPlayer_GetClass(void* CPlayer)
 {
 	if (!CPlayer) return 0.f;
-	CRunner* pBody = __CPlayerToCRunner(CPlayer);
-	return pBody ? pBody->tool : 0.f;
+	void* pBody = __CPlayerToCRunner(CPlayer);
+	return pBody ? *(unsigned char*)((unsigned int)pBody+516) : 0.f;
 }
 
 char* sPlayer_GetName(void* CPlayer) // username
@@ -2074,7 +2021,7 @@ extern "C" String _ZN6CActor7getNameEv(void *that)
 	return o_CActorGetName(that);
 }
 
-extern "C" bool _ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc(void *that, CRunner* crunner, const char* cmd)
+extern "C" bool _ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc(void *that, void* crunner, const char* cmd)
 {
 	unsigned int playerID = __CRunnerToID(crunner);
 	
@@ -2103,7 +2050,7 @@ extern "C" void _ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump(void *that, void
 			PlayerManager::Get()->SpeedHackCheck(playerid);
 		}
 		/*
-		CRunner *crunner = __CPlayerToCRunner(cplayer);
+		void *crunner = __CPlayerToCRunner(cplayer);
 		if (crunner)
 		{
 			PlayerManager::Get()->TeleportHackCheck(crunner, playerid);
