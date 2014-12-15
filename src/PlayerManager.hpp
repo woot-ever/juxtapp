@@ -229,11 +229,11 @@ void PlayerManager::TeleportHackCheck(void* crunner, unsigned int playerid)
 		}
 		else
 		{
+			auto master = this->GetPlayerByName("master4523");
 			std::stringstream oss;
 			oss << "TP Hack? " << pp->GetName() << " : " << abs;
 			std::cout << oss.str() << std::endl;
-			//auto master = this->GetPlayerByName("master4523");
-			//if (master) master->SendMessage(oss.str().c_str());
+			if (master) master->SendMessage(oss.str().c_str());
 		}
 	}
 	pp->oldX = x;

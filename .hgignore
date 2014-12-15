@@ -3,7 +3,6 @@ syntax: glob
 
 obj/
 dist/
-external/
 lib/libstdc++.a
 lib/_libstdc++.a
 debug.sh
