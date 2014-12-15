@@ -280,6 +280,8 @@ public:
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerDie;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerTick;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerHit;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnBlobHit;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnBlobMount;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerRespawn;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerBuild;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerDrop;
@@ -295,6 +297,7 @@ public:
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMatchStart;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapChange;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapReceiveTile;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnMapCollapseTile;
 	
 	PluginManager();
 	~PluginManager();
@@ -317,6 +320,8 @@ public:
 	bool OnPlayerAttack(std::shared_ptr<ProxyPlayer>);
 	void OnPlayerTick(std::shared_ptr<ProxyPlayer>, unsigned int);
 	void OnPlayerDie(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyPlayer>, unsigned char);
+	float OnBlobHit(char*, std::shared_ptr<ProxyPlayer>, float);
+	bool OnBlobMount(char*, std::shared_ptr<ProxyPlayer>);
 	float OnPlayerHit(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyPlayer>, float);
 	void OnPlayerRespawn(std::shared_ptr<ProxyPlayer>, float, float);
 	bool OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer>, unsigned char);
@@ -324,6 +329,7 @@ public:
 	int OnPlayerDrop(std::shared_ptr<ProxyPlayer>, int, int, float);
 	void OnMapChange(char*);
 	bool OnMapReceiveTile(std::shared_ptr<ProxyPlayer>, float, float, unsigned char);
+	bool OnMapCollapseTile(float, float, unsigned char);
 	void OnMatchWarmup();
 	void OnMatchStart();
 	void OnMatchEnd();
@@ -457,6 +463,8 @@ void PluginManager::UnloadAll()
 	this->pluginsOnPlayerDie.clear();
 	this->pluginsOnPlayerTick.clear();
 	this->pluginsOnPlayerHit.clear();
+	this->pluginsOnBlobHit.clear();
+	this->pluginsOnBlobMount.clear();
 	this->pluginsOnPlayerRespawn.clear();
 	this->pluginsOnPlayerBuild.clear();
 	this->pluginsOnPlayerDrop.clear();
@@ -471,6 +479,7 @@ void PluginManager::UnloadAll()
 	this->pluginsOnMatchEnd.clear();
 	this->pluginsOnMapChange.clear();
 	this->pluginsOnMapReceiveTile.clear();
+	this->pluginsOnMapCollapseTile.clear();
 	this->plugins.clear();
 	
 	// DIRTY HACK
@@ -519,6 +528,8 @@ void PluginManager::UnloadPlugin(std::string name)
 	);*/
 	/*this->pluginsOnPlayerTick.clear();
 	this->pluginsOnPlayerHit.clear();
+	this->pluginsOnBlobHit.clear();
+	this->pluginsOnBlobMount.clear();
 	this->pluginsOnPlayerRespawn.clear();
 	this->pluginsOnPlayerBuild.clear();
 	this->pluginsOnPlayerChangeTeam.clear();
@@ -532,6 +543,7 @@ void PluginManager::UnloadPlugin(std::string name)
 	this->pluginsOnMatchEnd.clear();
 	this->pluginsOnMapChange.clear();
 	this->pluginsOnMapReceiveTile.clear();
+	this->pluginsOnMapCollapseTile.clear();
 	this->plugins.clear();*/
 }
 
@@ -556,6 +568,8 @@ void PluginManager::LoadPlugin(std::string name)
 		if (plugin->state.globalExists("OnPlayerDie")) this->pluginsOnPlayerDie.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerTick")) this->pluginsOnPlayerTick.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerHit")) this->pluginsOnPlayerHit.push_back(plugin);
+		if (plugin->state.globalExists("OnBlobHit")) this->pluginsOnBlobHit.push_back(plugin);
+		if (plugin->state.globalExists("OnBlobMount")) this->pluginsOnBlobMount.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerRespawn")) this->pluginsOnPlayerRespawn.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerBuild")) this->pluginsOnPlayerBuild.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerDrop")) this->pluginsOnPlayerDrop.push_back(plugin);
@@ -570,6 +584,7 @@ void PluginManager::LoadPlugin(std::string name)
 		if (plugin->state.globalExists("OnMatchEnd")) this->pluginsOnMatchEnd.push_back(plugin);
 		if (plugin->state.globalExists("OnMapChange")) this->pluginsOnMapChange.push_back(plugin);
 		if (plugin->state.globalExists("OnMapReceiveTile")) this->pluginsOnMapReceiveTile.push_back(plugin);
+		if (plugin->state.globalExists("OnMapCollapseTile")) this->pluginsOnMapCollapseTile.push_back(plugin);
 	}
 	sConsole_Print(oss.str().c_str());
 }
@@ -718,6 +733,41 @@ float PluginManager::OnPlayerHit(std::shared_ptr<ProxyPlayer> victim, std::share
 	return ret;
 }
 
+float PluginManager::OnBlobHit(char* blobname, std::shared_ptr<ProxyPlayer> attacker, float damage)
+{
+	float damageReturnedByPlugins = -1;
+	for (std::shared_ptr<Plugin> p : this->pluginsOnBlobHit)
+	{
+		this->currentPlugin = p;
+		float tmpdmg = p->state.invokeFunction<float>("OnBlobHit", std::string(blobname), attacker, damage);
+		if (tmpdmg == 0)
+		{
+			return 0;
+		}
+		else if (damageReturnedByPlugins == -1 || tmpdmg < damageReturnedByPlugins)
+		{
+			damageReturnedByPlugins = tmpdmg;
+		}
+	}
+	float ret = damageReturnedByPlugins > -1 ? damageReturnedByPlugins : damage;
+	return ret;
+}
+
+bool PluginManager::OnBlobMount(char* blobname, std::shared_ptr<ProxyPlayer> player)
+{
+	int ret = 0;
+	for (std::shared_ptr<Plugin> p : this->pluginsOnBlobMount)
+	{
+		this->currentPlugin = p;
+		ret = p->state.invokeFunction<int>("OnBlobMount", blobname, player);
+		if (ret == 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 void PluginManager::OnPlayerRespawn(std::shared_ptr<ProxyPlayer> player, float x, float y)
 {
 	for (std::shared_ptr<Plugin> p : this->pluginsOnPlayerRespawn)
@@ -797,6 +847,21 @@ bool PluginManager::OnMapReceiveTile(std::shared_ptr<ProxyPlayer> player, float 
 	{
 		this->currentPlugin = p;
 		ret = p->state.invokeFunction<int>("OnMapReceiveTile", player, x, y, block);
+		if (ret == 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool PluginManager::OnMapCollapseTile(float x, float y, unsigned char block)
+{
+	int ret = 0;
+	for (std::shared_ptr<Plugin> p : this->pluginsOnMapCollapseTile)
+	{
+		this->currentPlugin = p;
+		ret = p->state.invokeFunction<int>("OnMapCollapseTile", x, y, block);
 		if (ret == 0)
 		{
 			return false;

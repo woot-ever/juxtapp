@@ -19,7 +19,7 @@
 #include <complex>
 #include <unistd.h>
 
-#include <curl/curl.h>
+//#include <curl/curl.h>
 
 #include "globals.hpp"
 #include "irrlicht/irrlicht.h"
@@ -80,7 +80,7 @@ bool DownloadBinary(std::string host, std::string saveto)
 {
 	std::cout << "DownloadBinary(\"" << host << "\", \"" << saveto << "\");" << std::endl;
 	FILE *fp = 0;
-	CURL *curl;
+	/*CURL *curl;
 	CURLcode res;
 	curl = curl_easy_init();
 	if(curl) {
@@ -103,14 +103,14 @@ bool DownloadBinary(std::string host, std::string saveto)
 		}
 	} else {
 		std::cout << "curl_easy_init failed!" << std::endl;
-	}
+	}*/
 	return false;
 }
 
 std::string DownloadText(std::string host)
 {
 	std::string buffer;
-	CURL *curl;
+	/*CURL *curl;
 	CURLcode res;
 	curl = curl_easy_init();
 	if(curl) {
@@ -125,7 +125,7 @@ std::string DownloadText(std::string host)
 		}
 		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 		return "";
-	}
+	}*/
 	return "";
 }
 
@@ -157,7 +157,7 @@ void UpdateLibraries(bool forceUpdate)
 
 bool CheckForUpdates()
 {
-	int new_version = atoi(DownloadText("http://update.juxta.cf/version.txt").c_str());
+	/*int new_version = atoi(DownloadText("http://update.juxta.cf/version.txt").c_str());
 	if (new_version==-1)
 	{
 		std::cout << std::endl << "ERROR! CANNOT CHECK FOR JUXTA++ UPDATES!" << std::endl << std::endl;
@@ -188,7 +188,7 @@ bool CheckForUpdates()
 	else
 	{
 		std::cout << std::endl << "No update avaliable :-(" << std::endl << std::endl;
-	}
+	}*/
 	return false;
 }
 
@@ -216,7 +216,6 @@ void find_dlsym(){
 }
 
 static void* (*o_CRunnerBuild)(void *, Vec2f, unsigned char) = 0;
-static String (*o_CActorGetName)(void *) = 0;
 static int (*o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream)(void*, bool, void*, void*) = 0;
 static int (*o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer)(void*, void*, void*) = 0;
 static int (*o_ZN14CPlayerManager12RemovePlayerEP7CPlayer)(void*, void*) = 0;
@@ -243,6 +242,7 @@ static void* (*o_ZN4CEgg5MountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN4CEgg7UnMountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner5MountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner7UnMountEP6CActor) (void*, void*) = 0;
+static void* (*o_ZN4CMap12CollapseTileEi) (void*, int) = 0;
 static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (void*, void*&, void*) = 0;
 static void (*o_ZN4CNet18server_SendRespawnEjP9_ENetPeer) (void*, unsigned int, void*) = 0;
 static int (*o_accept) (int, struct sockaddr*, socklen_t*) = 0;
@@ -750,6 +750,43 @@ void* my_CNetCreateServer(void* that)
 	//raise(SIGINT);
 	return o_CNetCreateServer(that);
 }
+
+typedef int (*o_CBlob__onHit_) (void* dis, float x1, float y1, float x2, float y2, float sumtin, void* p2, int s2, int s3);
+o_CBlob__onHit_ o_CBlob__onHit = NULL;
+
+int my_CBlob__onHit(void* dis, float x1, float y1, float x2, float y2, float damage, void* who, int s2, int s3)
+{
+	/*
+	std::cout << "x1 = "<< x1 << std::endl;
+	std::cout << "y1 = "<< y1 << std::endl;
+	std::cout << "x2 = "<< x2 << std::endl;
+	std::cout << "y2 = "<< y2 << std::endl;
+	std::cout << "damage = "<< damage << std::endl;
+	std::cout << "who = "<< __CRunnerToID(who) << std::endl;
+	std::cout << "s2 = "<< s2 << std::endl;
+	std::cout << "s3 = "<< s3 << std::endl;
+	*/
+	
+	//dis+48 = " 9x\bties/Rooms/Spawn_Room.cfg"
+	//dis+80 = "Entities/Rooms/Spawn_Room.cfg"
+	char* name = (char*)(*(unsigned int*)((unsigned int)dis+80));
+	
+	std::shared_ptr<ProxyPlayer> pAttacker;
+	if (!who)
+	{
+		// self made damage
+	}
+	else
+	{
+		// "who" is damaging "dis"
+		unsigned int killerID = __CRunnerToID(who);
+		pAttacker = PlayerManager::Get()->GetPlayerByID(killerID);
+	}
+	damage = PluginManager::Get()->OnBlobHit(name, pAttacker, damage);
+	
+	return o_CBlob__onHit(dis,x1,y1,x2,y2,damage,who,s2,s3);
+}
+
 typedef int (*o_CRunner__onHit_) (void* dis, float x1, float y1, float x2, float y2, float sumtin, void* p2, int s2, int s3);
 o_CRunner__onHit_ o_CRunner__onHit = NULL;
 
@@ -1100,6 +1137,7 @@ void HookFunctions(void* handle)
 	detour(CEgg__setPosition,_ZN4CEgg11setPositionE5Vec2f,8);
 	detour(CEgg__SendCatapult,_ZN4CEgg12SendCatapultE5Vec2fS0_hh,5);
 	detour(CRunner__onHit,_ZN7CRunner5onHitE5Vec2fS0_fP6CActorii,5);
+	detour(CBlob__onHit,_ZN5CBlob5onHitE5Vec2fS0_fP6CActorii,5);
 	detour(CPlayer__Send_Delta,_ZN7CPlayer10Send_DeltaEP10CBitStreamS1_S1_,5);
 	detour(CRunner__Send_Delta,_ZN7CRunner10Send_DeltaEP10CBitStreamS1_S1_,5);
 	detour(CNetCreateServer,_ZN4CNet12CreateServerEv,5);
@@ -1141,7 +1179,6 @@ void HookFunctions(void* handle)
 
 	o_ZN4CMap7LoadMapEPKcb = (void*(*)(void* that, char* mapname))o_dlsym(handle, "_ZN4CMap7LoadMapEPKcb");
 	o_CRunnerBuild = (void*(*)(void *, Vec2f, unsigned char))o_dlsym(handle, "_ZN7CRunner5BuildE5Vec2fh");
-	o_CActorGetName = (String(*)(void *))o_dlsym(handle, "_ZN6CActor7getNameEv");
 	o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream = (int(*)(void*,bool,void*,void*))o_dlsym(handle, "_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream");
 	o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer = (int(*)(void*,void*,void*))o_dlsym(handle, "_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer");
 	o_ZN14CPlayerManager12RemovePlayerEP7CPlayer = (int(*)(void*,void*))o_dlsym(handle, "_ZN14CPlayerManager12RemovePlayerEP7CPlayer");
@@ -1170,6 +1207,7 @@ void HookFunctions(void* handle)
 	o_ZN4CEgg7UnMountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN4CEgg7UnMountEP6CActor");
 	o_ZN7CRunner5MountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN7CRunner5MountEP6CActor");
 	o_ZN7CRunner7UnMountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN7CRunner7UnMountEP6CActor");
+	o_ZN4CMap12CollapseTileEi = (void*(*)(void*, int))o_dlsym(handle, "_ZN4CMap12CollapseTileEi");
 	
 	// Initialize plugin manager
 	PluginManager::Get()->Init(CURRENT_VERSION);
@@ -1265,7 +1303,18 @@ extern "C" void _ZN10CWorldTask7DropEggEi5Vec2fii(void* that, int a, Vec2f b, in
 
 extern "C" void _ZN7CRunner5MountEP6CActor(void* that, void* actor)
 {
-	//std::cout << "_ZN7CRunner5MountEP6CActor = " << __CRunnerToID(that) << " mounted the flag"  << std::endl;
+	char* name = (char*)(*(unsigned int*)((unsigned int)actor+80));
+	if (std::string(name).find("Entities/DK/donkeykeg") != std::string::npos) {
+		return;
+	}
+	
+	if (actor)
+	{
+		unsigned int mounterID = __CRunnerToID(that);
+		std::shared_ptr<ProxyPlayer> pMounter = PlayerManager::Get()->GetPlayerByID(mounterID);
+		bool ret = PluginManager::Get()->OnBlobMount(name, pMounter);
+		if (!ret) return;
+	}
 	
 	//std::wstring toast(L"Testing test");
 	//const wchar_t* szToast = toast.c_str();
@@ -1280,6 +1329,15 @@ extern "C" void _ZN7CRunner7UnMountEP6CActor(void* that, void* actor)
 	o_ZN7CRunner7UnMountEP6CActor(that, actor);
 }
 
+extern "C" void _ZN4CMap12CollapseTileEi(void* that, int xy)
+{
+	unsigned int x = xy % sMap_GetWidth();
+	unsigned int y = xy / sMap_GetWidth();
+	unsigned char block = sMap_GetTile(x, y);
+	if (!PluginManager::Get()->OnMapCollapseTile(x, y, block)) return;
+	o_ZN4CMap12CollapseTileEi(that, xy);
+}
+
 extern "C" void _ZN4CEgg5MountEP6CActor(void* that, void* actor)
 {
 	//std::cout << "_ZN4CEgg5MountEP6CActor = flag mounted by " << __CPlayerToID(actor) << std::endl;
@@ -1288,7 +1346,7 @@ extern "C" void _ZN4CEgg5MountEP6CActor(void* that, void* actor)
 
 extern "C" void _ZN4CEgg7UnMountEP6CActor(void* that, void* actor)
 {
-	//std::cout << "_ZN4CEgg7UnMountEP6CActor = flag unmoutned by " << __CPlayerToID(actor) << std::endl;
+	//std::cout << "_ZN4CEgg7UnMountEP6CActor = flag unmounted by " << __CPlayerToID(actor) << std::endl;
 	o_ZN4CEgg7UnMountEP6CActor(that, actor);
 }
 
@@ -2016,11 +2074,6 @@ void sMap_SetTile(float x, float y, byte b_type)
 	if (mapptr)	_CMap__server_SetTile(mapptr,x,y,b_type);
 }
 
-extern "C" String _ZN6CActor7getNameEv(void *that)
-{
-	return o_CActorGetName(that);
-}
-
 extern "C" bool _ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc(void *that, void* crunner, const char* cmd)
 {
 	unsigned int playerID = __CRunnerToID(crunner);
@@ -2029,7 +2082,7 @@ extern "C" bool _ZN5CRoom26hasEnoughResourcesFunctionEP7CRunnerPKc(void *that, v
 	if (pp)
 	{
 		if (PluginManager::Get()->ExecuteRoomCommand(pp, cmd)) return false;
-		if (cmd == "travel_right" || cmd == "travel_left")
+		if (strcmp(cmd, "travel_right")==0 || strcmp(cmd, "travel_left")==0)
 		{
 			pp->respawnFalsePositive = true;
 		}
@@ -2067,6 +2120,32 @@ extern "C" void _ZN10CWorldTask5StartEv(void *that)
 	
 	o_ZN10CWorldTask5StartEv(that);
 }
+
+/*
+extern "C" int _ZN4CEgg5onHitE5Vec2fS0_fP6CActorii(void *that, Vec2f a, Vec2f b, float c, void* d, int e, int f)
+{
+	std::cout << "_ZN4CEgg5onHitE5Vec2fS0_fP6CActorii" << std::endl;
+	std::cout << "a = " << a.x << ":" << a.y << std::endl;
+	std::cout << "b = " << b.x << ":" << b.y << std::endl;
+	std::cout << "c = " << c << std::endl;
+	std::cout << "d = " << d << std::endl;
+	std::cout << "e = " << e << std::endl;
+	std::cout << "f = " << f << std::endl;
+	return o_ZN4CEgg5onHitE5Vec2fS0_fP6CActorii(that, a, b, c, d, e, f);
+}
+*/
+
+/*extern "C" int _ZN5CBlob5onHitE5Vec2fS0_fP6CActori(void *that, Vec2f a, Vec2f b, float c, void* d, int e, int f)
+{
+	std::cout << "_ZN5CBlob5onHitE5Vec2fS0_fP6CActori" << std::endl;
+	std::cout << "a = " << a.x << ":" << a.y << std::endl;
+	std::cout << "b = " << b.x << ":" << b.y << std::endl;
+	std::cout << "c = " << c << std::endl;
+	std::cout << "d = " << d << std::endl;
+	std::cout << "e = " << e << std::endl;
+	std::cout << "f = " << f << std::endl;
+	return o_ZN5CBlob5onHitE5Vec2fS0_fP6CActori(that, a, b, c, d, e, f);
+}*/
 
 int l_my_print(lua_State* L)
 {
