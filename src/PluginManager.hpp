@@ -34,6 +34,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
 
 class Blocks {};
 class Teams {};
+class ActorTypes {};
 
 ////////////////////
 ////////////////////
@@ -124,6 +125,21 @@ public:
 	static unsigned int GetPlayersCount()
 	{
 		return PlayerManager::Get()->GetPlayersCount();
+	}
+	
+	static std::shared_ptr<ProxyBlob> GetBlobByID(unsigned int id)
+	{
+		return PlayerManager::Get()->GetBlobByID(id);
+	}
+	
+	static std::shared_ptr<ProxyBlob> GetBlobByIndex(unsigned int index)
+	{
+		return PlayerManager::Get()->GetBlobByIndex(index);
+	}
+	
+	static unsigned int GetBlobsCount()
+	{
+		return PlayerManager::Get()->GetBlobsCount();
 	}
 	
 	static void SendRcon(const char* cmd)
@@ -278,10 +294,12 @@ public:
 	std::vector<std::shared_ptr<Plugin>> plugins;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerTalk;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerDie;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnActorDie;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerTick;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerHit;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnBlobHit;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnBlobMount;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnFlagPick;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerRespawn;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerBuild;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerDrop;
@@ -298,6 +316,7 @@ public:
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapChange;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapReceiveTile;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapCollapseTile;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnUnload;
 	
 	PluginManager();
 	~PluginManager();
@@ -320,9 +339,12 @@ public:
 	bool OnPlayerAttack(std::shared_ptr<ProxyPlayer>);
 	void OnPlayerTick(std::shared_ptr<ProxyPlayer>, unsigned int);
 	void OnPlayerDie(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyPlayer>, unsigned char);
-	float OnBlobHit(char*, std::shared_ptr<ProxyPlayer>, float);
+	void OnActorDie(std::shared_ptr<ProxyBlob>);
+	float OnBlobHit(std::shared_ptr<ProxyBlob>, std::shared_ptr<ProxyActor>, float);
 	bool OnBlobMount(char*, std::shared_ptr<ProxyPlayer>);
-	float OnPlayerHit(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyPlayer>, float);
+	bool OnFlagPick(std::shared_ptr<ProxyPlayer>, const char*);
+	//float OnPlayerHit(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyBlob>, float);
+	float OnPlayerHit(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyActor>, float);
 	void OnPlayerRespawn(std::shared_ptr<ProxyPlayer>, float, float);
 	bool OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer>, unsigned char);
 	bool OnPlayerBuild(std::shared_ptr<ProxyPlayer>, float, float, unsigned char);
@@ -338,6 +360,7 @@ public:
 	void OnServerStart();
 	void OnServerReady();
 	void OnPlayerInit(std::shared_ptr<ProxyPlayer>);
+	void OnBlobInit(std::shared_ptr<ProxyBlob>);
 	
     static PluginManager *Get()
     {
@@ -447,9 +470,8 @@ void PluginManager::LoadAll()
 
 void PluginManager::UnloadAll()
 {
-	for (std::shared_ptr<Plugin> p : this->plugins)
+	for (std::shared_ptr<Plugin> p : this->pluginsOnUnload)
 	{
-		if (!p->state.globalExists("OnUnload")) continue;
 		this->currentPlugin = p;
 		try {
 			p->state.invokeVoidFunction("OnUnload");
@@ -461,10 +483,12 @@ void PluginManager::UnloadAll()
 	this->pluginsOnPlayerTalk.clear();
 	this->pluginsOnPlayerAttack.clear();
 	this->pluginsOnPlayerDie.clear();
+	this->pluginsOnActorDie.clear();
 	this->pluginsOnPlayerTick.clear();
 	this->pluginsOnPlayerHit.clear();
 	this->pluginsOnBlobHit.clear();
 	this->pluginsOnBlobMount.clear();
+	this->pluginsOnFlagPick.clear();
 	this->pluginsOnPlayerRespawn.clear();
 	this->pluginsOnPlayerBuild.clear();
 	this->pluginsOnPlayerDrop.clear();
@@ -480,6 +504,7 @@ void PluginManager::UnloadAll()
 	this->pluginsOnMapChange.clear();
 	this->pluginsOnMapReceiveTile.clear();
 	this->pluginsOnMapCollapseTile.clear();
+	this->pluginsOnUnload.clear();
 	this->plugins.clear();
 	
 	// DIRTY HACK
@@ -498,14 +523,18 @@ void PluginManager::UnloadAll()
 
 void PluginManager::ReloadAll()
 {
-	this->LoadConfig();
 	this->UnloadAll();
+	this->LoadConfig();
 	this->LoadAll();
 	
 	PluginManager::OnServerReady();
-	for (auto &p : PlayerManager::Get()->players)
+	for (auto &pp : PlayerManager::Get()->players)
 	{
-		PluginManager::OnPlayerInit(p);
+		PluginManager::OnPlayerInit(pp);
+	}
+	for (auto &pa : PlayerManager::Get()->blobs)
+	{
+		PluginManager::OnBlobInit(pa);
 	}
 }
 
@@ -530,6 +559,7 @@ void PluginManager::UnloadPlugin(std::string name)
 	this->pluginsOnPlayerHit.clear();
 	this->pluginsOnBlobHit.clear();
 	this->pluginsOnBlobMount.clear();
+	this->pluginsOnFlagPick.clear();
 	this->pluginsOnPlayerRespawn.clear();
 	this->pluginsOnPlayerBuild.clear();
 	this->pluginsOnPlayerChangeTeam.clear();
@@ -566,10 +596,12 @@ void PluginManager::LoadPlugin(std::string name)
 		if (plugin->state.globalExists("OnPlayerTalk")) this->pluginsOnPlayerTalk.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerAttack")) this->pluginsOnPlayerAttack.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerDie")) this->pluginsOnPlayerDie.push_back(plugin);
+		if (plugin->state.globalExists("OnActorDie")) this->pluginsOnActorDie.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerTick")) this->pluginsOnPlayerTick.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerHit")) this->pluginsOnPlayerHit.push_back(plugin);
 		if (plugin->state.globalExists("OnBlobHit")) this->pluginsOnBlobHit.push_back(plugin);
 		if (plugin->state.globalExists("OnBlobMount")) this->pluginsOnBlobMount.push_back(plugin);
+		if (plugin->state.globalExists("OnFlagPick")) this->pluginsOnFlagPick.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerRespawn")) this->pluginsOnPlayerRespawn.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerBuild")) this->pluginsOnPlayerBuild.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerDrop")) this->pluginsOnPlayerDrop.push_back(plugin);
@@ -585,6 +617,7 @@ void PluginManager::LoadPlugin(std::string name)
 		if (plugin->state.globalExists("OnMapChange")) this->pluginsOnMapChange.push_back(plugin);
 		if (plugin->state.globalExists("OnMapReceiveTile")) this->pluginsOnMapReceiveTile.push_back(plugin);
 		if (plugin->state.globalExists("OnMapCollapseTile")) this->pluginsOnMapCollapseTile.push_back(plugin);
+		if (plugin->state.globalExists("OnUnload")) this->pluginsOnUnload.push_back(plugin);
 	}
 	sConsole_Print(oss.str().c_str());
 }
@@ -612,6 +645,21 @@ void PluginManager::OnPlayerInit(std::shared_ptr<ProxyPlayer> player)
 		this->currentPlugin = p;
 		try {
 			p->state.invokeVoidFunction("OnPlayerInit", player);
+		} catch (...) {
+			PluginManager::Get()->Panic();
+		}
+	}
+}
+
+void PluginManager::OnBlobInit(std::shared_ptr<ProxyBlob> actor)
+{
+	//std::cout << "PluginManager::OnBlobInit" << std::endl;
+	for (std::shared_ptr<Plugin> p : this->plugins)
+	{
+		if (!p->state.globalExists("OnBlobInit")) continue;
+		this->currentPlugin = p;
+		try {
+			p->state.invokeVoidFunction("OnBlobInit", actor);
 		} catch (...) {
 			PluginManager::Get()->Panic();
 		}
@@ -700,6 +748,19 @@ void PluginManager::OnPlayerDie(std::shared_ptr<ProxyPlayer> victim, std::shared
 	}
 }
 
+void PluginManager::OnActorDie(std::shared_ptr<ProxyBlob> victim)
+{
+	for (std::shared_ptr<Plugin> p : this->pluginsOnActorDie)
+	{
+		this->currentPlugin = p;
+		try {
+			p->state.invokeVoidFunction("OnActorDie", victim);
+		} catch (...) {
+			PluginManager::Get()->Panic();
+		}
+	}
+}
+
 void PluginManager::OnPlayerTick(std::shared_ptr<ProxyPlayer> player, unsigned int ticks)
 {
 	for (std::shared_ptr<Plugin> p : this->pluginsOnPlayerTick)
@@ -713,7 +774,8 @@ void PluginManager::OnPlayerTick(std::shared_ptr<ProxyPlayer> player, unsigned i
 	}
 }
 
-float PluginManager::OnPlayerHit(std::shared_ptr<ProxyPlayer> victim, std::shared_ptr<ProxyPlayer> attacker, float damage)
+//float PluginManager::OnPlayerHit(std::shared_ptr<ProxyPlayer> victim, std::shared_ptr<ProxyBlob> attacker, float damage)
+float PluginManager::OnPlayerHit(std::shared_ptr<ProxyPlayer> victim, std::shared_ptr<ProxyActor> attacker, float damage)
 {
 	float damageReturnedByPlugins = -1;
 	for (std::shared_ptr<Plugin> p : this->pluginsOnPlayerHit)
@@ -733,13 +795,15 @@ float PluginManager::OnPlayerHit(std::shared_ptr<ProxyPlayer> victim, std::share
 	return ret;
 }
 
-float PluginManager::OnBlobHit(char* blobname, std::shared_ptr<ProxyPlayer> attacker, float damage)
+//float PluginManager::OnBlobHit(char* blobname, std::shared_ptr<ProxyPlayer> attacker, float damage)
+float PluginManager::OnBlobHit(std::shared_ptr<ProxyBlob> victim, std::shared_ptr<ProxyActor> attacker, float damage)
 {
 	float damageReturnedByPlugins = -1;
 	for (std::shared_ptr<Plugin> p : this->pluginsOnBlobHit)
 	{
 		this->currentPlugin = p;
-		float tmpdmg = p->state.invokeFunction<float>("OnBlobHit", std::string(blobname), attacker, damage);
+		//float tmpdmg = p->state.invokeFunction<float>("OnBlobHit", std::string(blobname), attacker, damage);
+		float tmpdmg = p->state.invokeFunction<float>("OnBlobHit", victim, attacker, damage);
 		if (tmpdmg == 0)
 		{
 			return 0;
@@ -760,6 +824,21 @@ bool PluginManager::OnBlobMount(char* blobname, std::shared_ptr<ProxyPlayer> pla
 	{
 		this->currentPlugin = p;
 		ret = p->state.invokeFunction<int>("OnBlobMount", blobname, player);
+		if (ret == 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool PluginManager::OnFlagPick(std::shared_ptr<ProxyPlayer> player, const char* flagname)
+{
+	int ret = 0;
+	for (std::shared_ptr<Plugin> p : this->pluginsOnFlagPick)
+	{
+		this->currentPlugin = p;
+		ret = p->state.invokeFunction<int>("OnFlagPick", player, flagname);
 		if (ret == 0)
 		{
 			return false;
@@ -1054,6 +1133,30 @@ Plugin::Plugin(std::string name, std::string path)
 	this->name = name;
 	this->path = path;
 	
+	this->state.Class<ActorTypes>("ActorTypes").
+		constants({
+			{"PLAYER",      1},
+			{"UNKNOWN_2",   2},
+			{"UNKNOWN_3",   3},
+			{"UNKNOWN_4",   4},
+			{"UNKNOWN_5",   5},
+			{"UNKNOWN_6",   6},
+			{"UNKNOWN_7",   7},
+			{"UNKNOWN_8",   8},
+			{"UNKNOWN_9",   9},
+			{"UNKNOWN_10", 10},
+			{"UNKNOWN_11", 11},
+			{"UNKNOWN_12", 12},
+			{"RUNNER",     13},
+			{"EGG",        14},
+			{"UNKNOWN_15", 15},
+			{"ZOMBIE",     16},
+			{"UNKNOWN_17", 17},
+			{"LANTERN",    18},
+			{"BOULDER",    19},
+		})
+	.end();
+	
 	this->state.Class<Blocks>("Blocks").
 		constants({
 			{"AIR", 0},
@@ -1095,8 +1198,33 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetVersion", &ProxyJuxta::GetVersion)
 	.end();
 	
+	/*
+	this->state.Class<ProxyBlob>("Actor")
+		.method("GetType", &ProxyBlob::GetType)
+	.end();
+	
+	this->state.Class<ProxyBlob>("Blob")
+		.method("GetType", &ProxyBlob::GetType)
+	.end();
+	*/
+	
+	this->state.Class<ProxyActor>("Actor")
+		.method("GetID", &ProxyActor::GetID)
+		.method("GetType", &ProxyActor::GetType)
+		.method("GetPlayer", &ProxyActor::GetPlayer)
+	.end();
+	
+	this->state.Class<ProxyBlob>("Blob")
+		.method("GetFactoryName", &ProxyBlob::GetFactoryName)
+		.method("GetConfigFileName", &ProxyBlob::GetConfigFileName)
+		.method("GetID", &ProxyBlob::GetID)
+		.method("GetType", &ProxyBlob::GetType)
+		.method("GetPlayer", &ProxyBlob::GetPlayer)
+	.end();
+	
 	this->state.Class<ProxyPlayer>("Player")
 		.method("GetID", &ProxyPlayer::GetID)
+		.method("GetBlob", &ProxyPlayer::GetBlob)
 		.method("GetName", &ProxyPlayer::GetName)
 		.method("GetClantag", &ProxyPlayer::GetClantag)
 		.method("GetCharacterName", &ProxyPlayer::GetCharacterName)
@@ -1112,6 +1240,7 @@ Plugin::Plugin(std::string name, std::string path)
 		//.method("GetPosition", &ProxyPlayer::GetPosition)
 		.method("GetX", &ProxyPlayer::GetX)
 		.method("GetY", &ProxyPlayer::GetY)
+		.method("GetIdleTime", &ProxyPlayer::GetIdleTime)
 		.method("GetHealth", &ProxyPlayer::GetHealth)
 		.method("GetBombs", &ProxyPlayer::GetBombs)
 		.method("GetArrows", &ProxyPlayer::GetArrows)
@@ -1174,6 +1303,9 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetPlayerByPartialName", &ProxyKAG::GetPlayerByPartialName)
 		.method("GetPlayerByIndex", &ProxyKAG::GetPlayerByIndex)
 		.method("GetPlayersCount", &ProxyKAG::GetPlayersCount)
+		.method("GetBlobByID", &ProxyKAG::GetBlobByID)
+		.method("GetBlobByIndex", &ProxyKAG::GetBlobByIndex)
+		.method("GetBlobsCount", &ProxyKAG::GetBlobsCount)
 		.method("SendRcon", &ProxyKAG::SendRcon)
 		.method("NextMap", &ProxyKAG::NextMap)
 		.method("RestartMap", &ProxyKAG::RestartMap)

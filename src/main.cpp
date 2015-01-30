@@ -19,8 +19,6 @@
 #include <complex>
 #include <unistd.h>
 
-//#include <curl/curl.h>
-
 #include "globals.hpp"
 #include "irrlicht/irrlicht.h"
 //#include "enet/enet.h"
@@ -64,133 +62,6 @@ struct APIPlayer {
 const int CURRENT_VERSION = 4;
 
 bool currdirinbase = false;
-
-int writer_string(char *data, size_t size, size_t nmemb, std::string *buffer)
-{
-    int result = 0;
-    if (buffer != NULL)
-    {
-      buffer->append(data, size * nmemb);
-      result = size * nmemb;
-    }
-    return result;
-}
-
-bool DownloadBinary(std::string host, std::string saveto)
-{
-	std::cout << "DownloadBinary(\"" << host << "\", \"" << saveto << "\");" << std::endl;
-	FILE *fp = 0;
-	/*CURL *curl;
-	CURLcode res;
-	curl = curl_easy_init();
-	if(curl) {
-		fp = fopen(saveto.c_str(), "wb");
-		if (fp) {
-			curl_easy_setopt(curl, CURLOPT_URL, host.c_str());
-			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-			res = curl_easy_perform(curl);
-			curl_easy_cleanup(curl);
-			fclose(fp);
-			if(res == CURLE_OK) {
-				return true;
-			} else {
-				std::cout << "download failed!" << std::endl;
-			}
-			return false;
-		} else {
-			std::cout << "fopen failed!" << std::endl;
-		}
-	} else {
-		std::cout << "curl_easy_init failed!" << std::endl;
-	}*/
-	return false;
-}
-
-std::string DownloadText(std::string host)
-{
-	std::string buffer;
-	/*CURL *curl;
-	CURLcode res;
-	curl = curl_easy_init();
-	if(curl) {
-		curl_easy_setopt(curl, CURLOPT_URL, host.c_str());
-		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer_string);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
-		res = curl_easy_perform(curl);
-		curl_easy_cleanup(curl);
-		if(res == CURLE_OK) {
-			return buffer;
-		}
-		fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-		return "";
-	}*/
-	return "";
-}
-
-void UpdateFile(const char* path, const char* webpath, const char* filename, bool forceUpdate)
-{
-	std::string filepath = std::string(currdirinbase ? "../" : "./") + std::string(path) + std::string(filename);
-	std::ifstream f(filepath);
-    if (!f.good() || forceUpdate) {
-		f.close();
-		std::cout << "Downloading " << filename << " to " << filepath << " ..." << std::endl;
-		if (DownloadBinary(std::string("http://update.juxta.cf/") + std::string(webpath) + std::string(filename), filepath))
-		{
-			std::cout << "Downloaded " << filename << std::endl;
-		}
-    }
-	else
-	{
-		f.close();
-	}
-}
-
-void UpdateLibraries(bool forceUpdate)
-{
-	UpdateFile("Plugins/__libs/", "files/libs/", "mathutils.lua", forceUpdate);
-	UpdateFile("Plugins/__libs/", "files/libs/", "stringutils.lua", forceUpdate);
-	UpdateFile("Plugins/__libs/", "files/libs/", "tableutils.lua", forceUpdate);
-	UpdateFile("Plugins/__libs/", "files/libs/", "db.lua", forceUpdate);
-}
-
-bool CheckForUpdates()
-{
-	/*int new_version = atoi(DownloadText("http://update.juxta.cf/version.txt").c_str());
-	if (new_version==-1)
-	{
-		std::cout << std::endl << "ERROR! CANNOT CHECK FOR JUXTA++ UPDATES!" << std::endl << std::endl;
-		return false;
-	}
-
-	std::string rel = currdirinbase ? "../" : "./";
-	mkdir(std::string(rel + std::string("Plugins")).c_str(), 0755);
-	mkdir(std::string(rel + std::string("Plugins/__libs")).c_str(), 0755);
-	UpdateLibraries(false);
-	
-	if (new_version>CURRENT_VERSION)
-	{
-		std::cout << std::endl << "New Juxta++ version found! Updating..." << std::endl << std::endl;
-		std::string thesoname = currdirinbase ? "../juxtapp.so" : "juxtapp.so";
-		if (DownloadBinary("http://update.juxta.cf/files/linux/juxtapp.so",thesoname))
-		{
-			UpdateLibraries(true);
-			std::cout << std::endl << "New version of Juxta++ is ready!" << std::endl << std::endl;
-			return true;
-		}
-		else
-		{
-			std::cout << std::endl << "ERROR! CANNOT DOWNLOAD NEW JUXTA++ LIBRARY, PLEASE UPDATE IT ON YOUR OWN!" << std::endl << std::endl;
-			return false;
-		}
-	}
-	else
-	{
-		std::cout << std::endl << "No update avaliable :-(" << std::endl << std::endl;
-	}*/
-	return false;
-}
 
 static void* (*o_dlsym) ( void *handle, const char *name ) = 0;
 
@@ -243,6 +114,18 @@ static void* (*o_ZN4CEgg7UnMountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner5MountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner7UnMountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN4CMap12CollapseTileEi) (void*, int) = 0;
+static void* (*o_ZN5CBlobC1EPKc) (void*, const char*) = 0;
+static void* (*o_ZN5CBlobC2EPKc) (void*, const char*) = 0;
+static void* (*o_ZN5CBlob4LoadEv) (void*) = 0;
+static void* (*o_ZN5CBlobD0Ev) (void*) = 0;
+static void* (*o_ZN5CBlobD1Ev) (void*) = 0;
+static void* (*o_ZN5CBlobD2Ev) (void*) = 0;
+static void* (*o_ZN6CActor11CreateActorEPKcS1_iS1_) (void*, const char*, const char*, int, const char*) = 0;
+static void* (*o_ZN6CActor7DestroyEv) (void*) = 0;
+static void* (*o_ZN6CActor4KillEv) (void*) = 0;
+static void* (*o_ZN6CActor4LoadEv) (void*) = 0;
+static void* (*o_ZN7CPlayer10ChangeTeamEi) (void*, int) = 0;
+static void* (*o_ZN6CActor7setTeamEt) (void*, unsigned short) = 0;
 static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (void*, void*&, void*) = 0;
 static void (*o_ZN4CNet18server_SendRespawnEjP9_ENetPeer) (void*, unsigned int, void*) = 0;
 static int (*o_accept) (int, struct sockaddr*, socklen_t*) = 0;
@@ -401,6 +284,9 @@ int my_CPlayerManager__MakeUniqueName(int a1, String a2, int a3, int a4)
 	int result = 0;
 	if (iid>0)
 	{
+		if (sPlayer_CheckFeature((void*)a3, "staff_color")) {
+			*(byte*)((unsigned int)a3 + 363) = 1; // set staff flag to 1
+		}
 		std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(iid);
 		if (pp)
 		{
@@ -476,6 +362,16 @@ unsigned int __CRunnerToID(void* rpointer)
 unsigned int __CPlayerToID(void* rpointer)
 {
 	return rpointer ? (*(unsigned short int*)((unsigned int)rpointer+120)) : 0;
+}
+
+unsigned int __CActorToID(void* rpointer)
+{
+	return rpointer ? (*(unsigned short int*)((unsigned int)rpointer+184)) : 0;
+}
+
+unsigned int __CBlobToID(void* rpointer)
+{
+	return rpointer ? (*(unsigned short int*)((unsigned int)rpointer+184)) : 0;
 }
 
 void* __CRunnerToCPlayer(void* rpointer)
@@ -769,20 +665,18 @@ int my_CBlob__onHit(void* dis, float x1, float y1, float x2, float y2, float dam
 	
 	//dis+48 = " 9x\bties/Rooms/Spawn_Room.cfg"
 	//dis+80 = "Entities/Rooms/Spawn_Room.cfg"
-	char* name = (char*)(*(unsigned int*)((unsigned int)dis+80));
 	
-	std::shared_ptr<ProxyPlayer> pAttacker;
-	if (!who)
-	{
-		// self made damage
+	//std::cout << "victim pointer = " << dis << std::endl;
+	unsigned int victimID = __CBlobToID(dis);
+	//std::cout << "victimID = " << victimID << std::endl;
+	std::shared_ptr<ProxyBlob> pbVictim = PlayerManager::Get()->GetBlobByID(victimID);
+	std::shared_ptr<ProxyActor> paAttacker;
+	if (pbVictim) {
+		if (who) {
+			paAttacker = std::make_shared<ProxyActor>(who);
+		}
+		damage = PluginManager::Get()->OnBlobHit(pbVictim, paAttacker, damage);
 	}
-	else
-	{
-		// "who" is damaging "dis"
-		unsigned int killerID = __CRunnerToID(who);
-		pAttacker = PlayerManager::Get()->GetPlayerByID(killerID);
-	}
-	damage = PluginManager::Get()->OnBlobHit(name, pAttacker, damage);
 	
 	return o_CBlob__onHit(dis,x1,y1,x2,y2,damage,who,s2,s3);
 }
@@ -792,6 +686,16 @@ o_CRunner__onHit_ o_CRunner__onHit = NULL;
 
 int my_CRunner__onHit(void* dis, float x1, float y1, float x2, float y2, float damage, void* who, int s2, int s3)
 {
+	unsigned int victimID = __CRunnerToID(dis);
+	std::shared_ptr<ProxyPlayer> pVictim = PlayerManager::Get()->GetPlayerByID(victimID);
+	std::shared_ptr<ProxyActor> paAttacker;
+	if (who) {
+		paAttacker = std::make_shared<ProxyActor>(who);
+	}
+	damage = PluginManager::Get()->OnPlayerHit(pVictim, paAttacker, damage);
+	return o_CRunner__onHit(dis,x1,y1,x2,y2,damage,who,s2,s3);
+	
+	/*
 	unsigned int victimID = __CRunnerToID(dis);
 	std::shared_ptr<ProxyPlayer> pVictim = PlayerManager::Get()->GetPlayerByID(victimID);
 	std::shared_ptr<ProxyPlayer> pAttacker;
@@ -807,6 +711,7 @@ int my_CRunner__onHit(void* dis, float x1, float y1, float x2, float y2, float d
 	}
 	
 	damage = PluginManager::Get()->OnPlayerHit(pVictim, pAttacker, damage);
+	*/
 	
 	return o_CRunner__onHit(dis,x1,y1,x2,y2,damage,who,s2,s3);
 }
@@ -906,6 +811,7 @@ myfunc(int,CEgg__SendCatapult,void* dis, float x1, float y1, float x2, float y2,
 // ONCHANGETEAM HERE
 // ---------------
 // ---------------
+/*
 myfunc(int,CPlayer__ChangeTeam,void* dis, DWORD team)
 {
 	unsigned int playerID = __CPlayerToID(dis);
@@ -916,11 +822,11 @@ myfunc(int,CPlayer__ChangeTeam,void* dis, DWORD team)
 	}
 	return o_CPlayer__ChangeTeam(dis,team);
 }
-
+*/
 void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
 {
 	if (!CPlayer) return;
-	o_CPlayer__ChangeTeam(CPlayer,team);
+	//o_CPlayer__ChangeTeam(CPlayer,team);
 }
 
 void sPlayer_SetScore(void* CPlayer, WORD score)
@@ -938,11 +844,10 @@ WORD sPlayer_GetScore(void* CPlayer)
 myfunc(int,CRules__OnPlayerDie,void* CRules,void* victim,void* killer,byte death) // death is type of death ;_;
 {
 	unsigned int victimID = __CPlayerToID(victim);
-	unsigned int killerID = __CPlayerToID(killer);
 	std::shared_ptr<ProxyPlayer> pVictim = PlayerManager::Get()->GetPlayerByID(victimID);
-	std::shared_ptr<ProxyPlayer> pKiller = PlayerManager::Get()->GetPlayerByID(killerID);
-	if (pVictim)
-	{
+	if (pVictim) {
+		unsigned int killerID = __CPlayerToID(killer);
+		std::shared_ptr<ProxyPlayer> pKiller = PlayerManager::Get()->GetPlayerByID(killerID);
 		PluginManager::Get()->OnPlayerDie(pVictim, pKiller, death);
 	}
 	
@@ -994,26 +899,6 @@ myfunc(int,CRules__EndMatch,void* CRules)
 	{
 		if ( *(bool*)((DWORD)CRules + 464) )
 		{
-			if (JuxtaConfig::Get()->update_onmatchend == true && fucking_seconds_counter>=3600)
-			{
-				fucking_seconds_counter = 0;
-				if (CheckForUpdates())
-				{
-					_CNetworkTask__Stop(nettask_ptr);
-					chdir("..//");
-					char result[PATH_MAX];
-					ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
-					std::string exePath = std::string(result, (count > 0) ? count : 0);
-					if (exePath.length() > 0)
-					{
-						char *const args[] = { (char*)exePath.c_str(), 0 };
-						char *const envs[] = { "LD_PRELOAD=./juxtapp.so", 0};
-						execve(args[0], args, envs);
-						fprintf(stderr, "Failed to reexecute %s\n", args[0]);
-						exit(1);
-					}
-				}
-			}
 			PluginManager::Get()->OnMatchEnd();
 		}
 	}
@@ -1105,11 +990,13 @@ void sServer_Script(const char* script)
 
 myfunc(int,CPlayer__CallbackTeamPick,void* CPlayer)
 {
+	//std::cout << "CPlayer__CallbackTeamPick" << std::endl;
 	return o_CPlayer__CallbackTeamPick(CPlayer);
 }
 
 myfunc(int,CActor__setTeam,void* CActor,WORD team)
 {
+	//std::cout << "CActor__setTeam " << team << std::endl;
 	return o_CActor__setTeam(CActor,team);
 }
 
@@ -1123,14 +1010,14 @@ myfunc(int,CNetworkTask__Start,void* cnettask)
 
 void HookFunctions(void* handle)
 {
-	detour(CActor__setTeam,_ZN6CActor7setTeamEt,6);
+	//detour(CActor__setTeam,_ZN6CActor7setTeamEt,6);
 	detour(CPlayer__CallbackTeamPick,_ZN7CPlayer16CallbackTeamPickEv,5);
 	detour(CRules__Think,_ZN6CRules5ThinkEv,5);
 	detour(CRules__EndMatch,_ZN6CRules8EndMatchEv,6);
 	detour(CRules__StartMatch,_ZN6CRules10StartMatchEv,6);
 	detour(CRules__OnPlayerRespawn,_ZN6CRules15OnPlayerRespawnEP18CRespawnQueueActor,7);
 	detour(CRules__OnPlayerDie,_ZN6CRules11OnPlayerDieEP7CPlayerS1_h,5);
-	detour(CPlayer__ChangeTeam,_ZN7CPlayer10ChangeTeamEi,6);
+	//detour(CPlayer__ChangeTeam,_ZN7CPlayer10ChangeTeamEi,6);
 	detour(CRunner__UpdateVisuals,_ZN7CRunner13UpdateVisualsEv,5);
 	detour(CEgg__Send_Delta,_ZN4CEgg10Send_DeltaEP10CBitStreamS1_S1_,5);
 	detour(CEgg__getMovementSignificance,_ZN4CEgg23getMovementSignificanceEv,6);
@@ -1208,6 +1095,18 @@ void HookFunctions(void* handle)
 	o_ZN7CRunner5MountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN7CRunner5MountEP6CActor");
 	o_ZN7CRunner7UnMountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN7CRunner7UnMountEP6CActor");
 	o_ZN4CMap12CollapseTileEi = (void*(*)(void*, int))o_dlsym(handle, "_ZN4CMap12CollapseTileEi");
+	o_ZN5CBlobC1EPKc = (void*(*)(void*, const char*))o_dlsym(handle, "_ZN5CBlobC1EPKc");
+	o_ZN5CBlobC2EPKc = (void*(*)(void*, const char*))o_dlsym(handle, "_ZN5CBlobC2EPKc");
+	o_ZN5CBlob4LoadEv = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlob4LoadEv");
+	o_ZN5CBlobD0Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD0Ev");
+	o_ZN5CBlobD1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD1Ev");
+	o_ZN5CBlobD2Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD2Ev");
+	o_ZN6CActor11CreateActorEPKcS1_iS1_ = (void*(*)(void*, const char*, const char*, int, const char*))o_dlsym(handle, "_ZN6CActor11CreateActorEPKcS1_iS1_");
+	o_ZN6CActor7DestroyEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor7DestroyEv");
+	o_ZN6CActor4KillEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor4KillEv");
+	o_ZN6CActor4LoadEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor4LoadEv");
+	o_ZN7CPlayer10ChangeTeamEi = (void*(*)(void*, int))o_dlsym(handle, "_ZN7CPlayer10ChangeTeamEi");
+	o_ZN6CActor7setTeamEt = (void*(*)(void*, unsigned short))o_dlsym(handle, "_ZN6CActor7setTeamEt");
 	
 	// Initialize plugin manager
 	PluginManager::Get()->Init(CURRENT_VERSION);
@@ -1219,31 +1118,7 @@ extern "C" void *dlsym(void *handle, const char *name){
 	}
 	if (strcmp(name, "GameDLLInit") == 0) {
 		PluginManager::Get()->LoadConfig();
-		if (JuxtaConfig::Get()->update_onserverstart == true)
-		{
-			if (CheckForUpdates())
-			{
-				char result[PATH_MAX];
-				ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
-				std::string exePath = std::string(result, (count > 0) ? count : 0);
-				if (exePath.length() > 0)
-				{
-					char *const args[] = { (char*)exePath.c_str(), 0 };
-					char *const envs[] = { "LD_PRELOAD=./juxtapp.so", 0};
-					execve(args[0], args, envs);
-					fprintf(stderr, "Failed to reexecute %s\n", args[0]);
-					exit(1);
-				}
-			}
-			else
-			{
-				HookFunctions(handle);
-			}
-		}
-		else
-		{
-			HookFunctions(handle);
-		}
+		HookFunctions(handle);
 		currdirinbase = true;
 	}
 	dllh = (unsigned int)handle;
@@ -1303,16 +1178,24 @@ extern "C" void _ZN10CWorldTask7DropEggEi5Vec2fii(void* that, int a, Vec2f b, in
 
 extern "C" void _ZN7CRunner5MountEP6CActor(void* that, void* actor)
 {
-	char* name = (char*)(*(unsigned int*)((unsigned int)actor+80));
-	if (std::string(name).find("Entities/DK/donkeykeg") != std::string::npos) {
-		return;
-	}
+	//std::cout << "_ZN7CRunner5MountEP6CActor: " << actor << std::endl;
 	
+	char* name = (char*)(*(unsigned int*)((unsigned int)actor+80));
 	if (actor)
 	{
 		unsigned int mounterID = __CRunnerToID(that);
 		std::shared_ptr<ProxyPlayer> pMounter = PlayerManager::Get()->GetPlayerByID(mounterID);
 		bool ret = PluginManager::Get()->OnBlobMount(name, pMounter);
+		if (!ret) return;
+	
+		wchar_t* wcInventoryName = (wchar_t*)(*(unsigned int*)((unsigned int)actor+432));
+		char *inventoryname = new char[256];
+		wcstombs(inventoryname, wcInventoryName, 256);
+		if (strcmp(inventoryname, "Red Flag") == 0 || strcmp(inventoryname, "Blue Flag") == 0) {
+			std::shared_ptr<ProxyPlayer> pMounter = PlayerManager::Get()->GetPlayerByID(mounterID);
+			ret = PluginManager::Get()->OnFlagPick(pMounter, std::string(inventoryname).c_str());
+		}
+		delete[] inventoryname;
 		if (!ret) return;
 	}
 	
@@ -1336,6 +1219,109 @@ extern "C" void _ZN4CMap12CollapseTileEi(void* that, int xy)
 	unsigned char block = sMap_GetTile(x, y);
 	if (!PluginManager::Get()->OnMapCollapseTile(x, y, block)) return;
 	o_ZN4CMap12CollapseTileEi(that, xy);
+}
+
+extern "C" void _ZN5CBlobC1EPKc(void* that, const char* s)
+{
+	//std::cout << "_ZN5CBlobC1EPKc " << that << " " << s << std::endl;
+	o_ZN5CBlobC1EPKc(that, s);
+}
+
+extern "C" void _ZN5CBlobC2EPKc(void* that, const char* s)
+{
+	//std::cout << "_ZN5CBlobC2EPKc " << that << " " << s << std::endl;
+	o_ZN5CBlobC2EPKc(that, s);
+}
+
+extern "C" void _ZN5CBlobD0Ev(void* that)
+{
+	//std::cout << "_ZN5CBlobD0Ev " << that << std::endl;
+	unsigned int actorID = __CActorToID(that);
+	std::shared_ptr<ProxyBlob> pa = PlayerManager::Get()->GetBlobByID(actorID);
+	pa->_exists = false;
+	if (pa) PlayerManager::Get()->RemoveBlob(pa);
+	o_ZN5CBlobD0Ev(that);
+}
+
+extern "C" void _ZN5CBlobD1Ev(void* that)
+{
+	//std::cout << "_ZN5CBlobD1Ev " << that << std::endl;
+	unsigned int actorID = __CActorToID(that);
+	std::shared_ptr<ProxyBlob> pa = PlayerManager::Get()->GetBlobByID(actorID);
+	pa->_exists = false;
+	if (pa) PlayerManager::Get()->RemoveBlob(pa);
+	o_ZN5CBlobD1Ev(that);
+}
+
+extern "C" void _ZN5CBlobD2Ev(void* that)
+{
+	//std::cout << "_ZN5CBlobD2Ev " << that << std::endl;
+	unsigned int actorID = __CActorToID(that);
+	//std::cout << "actorID = " << actorID << std::endl;
+	std::shared_ptr<ProxyBlob> pa = PlayerManager::Get()->GetBlobByID(actorID);
+	pa->_exists = false;
+	if (pa) PlayerManager::Get()->RemoveBlob(pa);
+	o_ZN5CBlobD2Ev(that);
+}
+
+extern "C" void _ZN5CBlob4LoadEv(void* that)
+{
+	//std::cout << "_ZN5CBlob4LoadEv " << that << std::endl;
+	auto pa = std::make_shared<ProxyBlob>(that);
+	PlayerManager::Get()->AddBlob(pa);
+	PluginManager::Get()->OnBlobInit(pa);
+	o_ZN5CBlob4LoadEv(that);
+}
+
+extern "C" void* _ZN6CActor11CreateActorEPKcS1_iS1_(void* that, const char* a, const char* b, int c, const char* d)
+{
+	/*std::cout << "_ZN6CActor11CreateActorEPKcS1_iS1_ " << that << std::endl;
+	if (a) std::cout << a << std::endl;
+	if (c) std::cout << c << std::endl;
+	if (d) std::cout << d << std::endl;
+	void* pActor  = o_ZN6CActor11CreateActorEPKcS1_iS1_(that, a, b, c, d);
+	std::cout << "pActor = " << pActor << std::endl;
+	auto pa = std::make_shared<ProxyBlob>(pActor);
+	PlayerManager::Get()->AddActor(pa);
+	PluginManager::Get()->OnActorInit(pa);
+	return pActor;*/
+	return o_ZN6CActor11CreateActorEPKcS1_iS1_(that, a, b, c, d);
+}
+
+extern "C" void _ZN6CActor7DestroyEv(void* that)
+{
+	/*std::cout << "_ZN6CActor7DestroyEv " << that << std::endl;
+	unsigned int actorID = __CActorToID(that);
+	std::shared_ptr<ProxyBlob> pa = PlayerManager::Get()->GetActorByID(actorID);
+	if (pa) PlayerManager::Get()->RemoveActor(pa);*/
+	o_ZN6CActor7DestroyEv(that);
+}
+
+extern "C" void _ZN6CActor4KillEv(void* that)
+{
+	/*std::cout << "_ZN6CActor4KillEv " << that << std::endl;
+	unsigned int actorID = __CActorToID(that);
+	std::shared_ptr<ProxyBlob> pa = PlayerManager::Get()->GetActorByID(actorID);
+	if (pa) PluginManager::Get()->OnActorDie(pa);*/
+	o_ZN6CActor4KillEv(that);
+}
+
+extern "C" void _ZN6CActor4LoadEv(void* that)
+{
+	//std::cout << "_ZN6CActor4LoadEv " << that << std::endl;
+	o_ZN6CActor4LoadEv(that);
+}
+
+extern "C" void _ZN7CPlayer10ChangeTeamEi(void* that, int team)
+{
+	//std::cout << "_ZN7CPlayer10ChangeTeamEi " << team << std::endl;
+	o_ZN7CPlayer10ChangeTeamEi(that, team);
+}
+
+extern "C" void _ZN6CActor7setTeamEt(void* that, unsigned short team)
+{
+	//std::cout << "_ZN6CActor7setTeamEt " << team << std::endl;
+	o_ZN6CActor7setTeamEt(that, team);
 }
 
 extern "C" void _ZN4CEgg5MountEP6CActor(void* that, void* actor)
@@ -1726,6 +1712,7 @@ float _getdistance(float x1, float y1, float x2, float y2)
 
 extern "C" void _ZN7CRunner5BuildE5Vec2fh(void *that, struct Vec2f pos, unsigned char block)
 {
+	//std::cout << that << std::endl;
 	float rangebuild = _getdistance(pos.x,pos.y,sPlayer_GetPosX(__CRunnerToCPlayer(that)),sPlayer_GetPosY(__CRunnerToCPlayer(that)));
 	if (rangebuild > 50) return;
 	unsigned int playerID = __CRunnerToID(that);
@@ -1790,6 +1777,13 @@ bool sPlayer_IsDead(void* CPlayer)
 	return pBody ? true : false;
 }
 
+unsigned int sPlayer_GetIdleTime(void* CPlayer)
+{
+	if (!CPlayer) return 0;
+	void* pBody = __CPlayerToCRunner(CPlayer);
+	return pBody ? *(unsigned int*)((unsigned int)pBody+532) : 0;
+}
+
 float sPlayer_GetPosX(void* CPlayer)
 {
 	if (!CPlayer) return 0.f;
@@ -1809,6 +1803,12 @@ char sPlayer_GetClass(void* CPlayer)
 	if (!CPlayer) return 0.f;
 	void* pBody = __CPlayerToCRunner(CPlayer);
 	return pBody ? *(unsigned char*)((unsigned int)pBody+516) : 0.f;
+}
+
+void* sPlayer_GetRunner(void* CPlayer) // username
+{
+	if (!CPlayer) return NULL;
+	return __CPlayerToCRunner(CPlayer);
 }
 
 char* sPlayer_GetName(void* CPlayer) // username

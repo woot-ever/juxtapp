@@ -14,7 +14,7 @@ CC = g++
 #LDFLAGS += -g -Wall --std=c++11 -static -static-libgcc -ldl -lm -lpthread -Iinclude -Llib -lstdc++ -llua -shared -fPIC
 
 #CPPFLAGS += --std=c++11 -static -static-libgcc -ldl -lm -lpthread -Isrc/include -Lsrc/lib -lstdc++ -llua -lcurl -shared -fPIC
-CPPFLAGS = --std=c++11 -static -static-libgcc -ldl -lm -lpthread -Isrc/include -Lsrc/lib -lstdc++ -llua -lcurl -shared -fPIC
+CPPFLAGS = --std=c++11 -static -static-libgcc -ldl -lm -lpthread -Isrc/include -Lsrc/lib -lstdc++ -llua -shared -fPIC
 
 OBJDIR=obj
 DISTDIR=dist

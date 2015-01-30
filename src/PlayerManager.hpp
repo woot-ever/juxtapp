@@ -14,6 +14,56 @@
 ////////////////////
 ////////////////////
 
+class ProxyPlayer;
+class ProxyBlob;
+class ProxyActor;
+class PlayerManager;
+
+////////////////////
+////////////////////
+
+class ProxyActor
+{
+public:
+	void *cactor;
+	
+	ProxyActor(void* p)
+	{
+		this->cactor = p;
+		//std::cout << "ProxyActor::ProxyActor, cactor pointer = " << this->cactor << std::endl;
+	}
+	~ProxyActor() {}
+	
+	unsigned short GetID();
+	unsigned char GetType();
+	std::shared_ptr<ProxyPlayer> GetPlayer();;
+};
+
+class ProxyBlob
+{
+public:
+	void *cactor;
+	unsigned int id;
+	bool _exists;
+	
+	ProxyBlob(void* p)
+	{
+		this->cactor = p;
+		this->_exists = true;
+		this->id = p ? (*(unsigned short int*)((unsigned int)p+184)) : 0;
+		//std::cout << "ProxyBlob::ProxyBlob, cactor pointer = " << this->cactor << std::endl;
+	}
+	~ProxyBlob() {}
+	bool exists() { return this->_exists; }
+	
+	std::string GetFactoryName();
+	std::string GetConfigFileName();
+	unsigned short GetID();
+	unsigned char GetType();
+	std::shared_ptr<ProxyPlayer> GetPlayer();
+};
+
+//class ProxyPlayer : public ProxyBlob
 class ProxyPlayer
 {
 public:
@@ -37,9 +87,10 @@ public:
 	bool respawnFalsePositive;
 	bool playing;
 	
-	ProxyPlayer(void* cp, unsigned int id)
+	//ProxyPlayer(void* p, unsigned int id) : ProxyBlob(p)
+	ProxyPlayer(void* p, unsigned int id)
 	{
-		this->cplayer = cp; 
+		this->cplayer = p; 
 		this->id = id;
 		this->_exists = true;
 		this->speedhack_ticks = 0;
@@ -55,6 +106,12 @@ public:
 	~ProxyPlayer() {}
 	bool exists() { return this->_exists; }
 	
+	std::shared_ptr<ProxyBlob> GetBlob() {
+		void* pRunner = sPlayer_GetRunner(this->cplayer);
+		std::shared_ptr<ProxyBlob> blob;
+		if (pRunner) blob = std::make_shared<ProxyBlob>((void*)pRunner);
+		return blob;
+	}
 	unsigned int GetID() { return this->id; }
 	const char* GetName() { return sPlayer_GetName(this->cplayer); }
 	const char* GetClantag() { return sPlayer_GetClantag(this->cplayer); }
@@ -69,6 +126,7 @@ public:
 	unsigned char GetTeam() { return sPlayer_GetTeam(this->cplayer); }
 	float GetX() { return sPlayer_GetPosX(this->cplayer); }
 	float GetY() { return sPlayer_GetPosY(this->cplayer); }
+	unsigned int GetIdleTime() { return sPlayer_GetIdleTime(this->cplayer); }
 	float GetHealth() { return sPlayer_GetHealth(this->cplayer); }
 	unsigned char GetBombs() { return sPlayer_GetBombs(this->cplayer); }
 	unsigned char GetArrows() { return sPlayer_GetArrows(this->cplayer); }
@@ -123,12 +181,17 @@ public:
 	static PlayerManager *s_instance;
 	
 	std::vector<std::shared_ptr<ProxyPlayer>> players;
+	std::vector<std::shared_ptr<ProxyBlob>> blobs;
 	
 	PlayerManager();
 	~PlayerManager();
 	
 	void AddPlayer(std::shared_ptr<ProxyPlayer>);
 	void RemovePlayer(std::shared_ptr<ProxyPlayer>);
+	
+	void AddBlob(std::shared_ptr<ProxyBlob>);
+	void RemoveBlob(std::shared_ptr<ProxyBlob>);
+	
 	//std::list<std::shared_ptr<ProxyPlayer>> GetPlayers();
 	//std::list<std::shared_ptr<ProxyPlayer>> GetPlayersBySeclev(unsigned int);
 	std::shared_ptr<ProxyPlayer> GetPlayerByID(unsigned int);
@@ -136,6 +199,11 @@ public:
 	std::shared_ptr<ProxyPlayer> GetPlayerByPartialName(const char*);
 	std::shared_ptr<ProxyPlayer> GetPlayerByIndex(unsigned int);
 	unsigned int GetPlayersCount();
+	
+	std::shared_ptr<ProxyBlob> GetBlobByID(unsigned int);
+	std::shared_ptr<ProxyBlob> GetBlobByIndex(unsigned int);
+	unsigned int GetBlobsCount();
+	
 	void SpeedHackCheck(unsigned int);
 	void AttackHackCheck(unsigned int);
 	void TeleportHackCheck(void* crunner, unsigned int playerid);
@@ -245,12 +313,26 @@ void PlayerManager::AddPlayer(std::shared_ptr<ProxyPlayer> player)
 	this->players.push_back(player);
 }
 
+void PlayerManager::AddBlob(std::shared_ptr<ProxyBlob> blob)
+{
+	if (!blob) return;
+	this->blobs.push_back(blob);
+}
+
 void PlayerManager::RemovePlayer(std::shared_ptr<ProxyPlayer> player)
 {
 	this->players.erase(std::remove_if(this->players.begin(), this->players.end(), [](std::shared_ptr<ProxyPlayer> &p)
 	{
 		return !p->exists();
 	}), this->players.end());
+}
+
+void PlayerManager::RemoveBlob(std::shared_ptr<ProxyBlob> blob)
+{
+	this->blobs.erase(std::remove_if(this->blobs.begin(), this->blobs.end(), [](std::shared_ptr<ProxyBlob> &o)
+	{
+		return !o->exists();
+	}), this->blobs.end());
 }
 
 /*std::list<std::shared_ptr<ProxyPlayer>> PlayerManager::GetPlayers()
@@ -306,6 +388,82 @@ std::shared_ptr<ProxyPlayer> PlayerManager::GetPlayerByIndex(unsigned int index)
 	if (index < 1 || index > this->players.size()) return nullptr;
 	return this->players[index-1];
 }
+
+//
+
+std::shared_ptr<ProxyBlob> PlayerManager::GetBlobByID(unsigned int id)
+{
+	for (auto &o : this->blobs)
+	{
+		if (o->id == id) return o;
+	}
+	return std::shared_ptr<ProxyBlob>(nullptr);
+}
+
+unsigned int PlayerManager::GetBlobsCount()
+{
+	return this->blobs.size();
+}
+
+std::shared_ptr<ProxyBlob> PlayerManager::GetBlobByIndex(unsigned int index)
+{
+	// index starts at 1 in Lua
+	if (index < 1 || index > this->blobs.size()) return nullptr;
+	return this->blobs[index-1];
+}
+
+////////////////////
+////////////////////
+
+std::string ProxyBlob::GetFactoryName() {
+	std::string factoryName = (char*)(*(unsigned int*)((unsigned int)this->cactor+76));
+	//std::cout << "ProxyBlob::GetFactoryName factoryName = " << factoryName << std::endl;
+	return factoryName;
+}
+std::string ProxyBlob::GetConfigFileName() {
+	std::string configFileName = (char*)(*(unsigned int*)((unsigned int)this->cactor+80));
+	//std::cout << "ProxyBlob::GetConfigFileName configFileName = " << configFileName << std::endl;
+	return configFileName;
+}
+unsigned short ProxyBlob::GetID() {
+	unsigned short networkid = (unsigned short)(*(unsigned int*)((unsigned int)this->cactor+184));
+	//std::cout << "ProxyBlob::GetID networkid = " << networkid << std::endl;
+	return networkid;
+}
+unsigned char ProxyBlob::GetType() {
+	unsigned char type = (unsigned char)(*(unsigned int*)((unsigned int)this->cactor+72));
+	//std::cout << "ProxyBlob::GetType type = " << (int)type << std::endl;
+	return type;
+}
+std::shared_ptr<ProxyPlayer> ProxyBlob::GetPlayer() {
+	//TODO: use __CRunnerToID instead
+	unsigned int PlayerPTR = *(unsigned int*)((unsigned int)this->cactor+220);
+	if (!PlayerPTR) return nullptr;
+	unsigned int PlayerID = (*(unsigned short int*)(PlayerPTR+120));
+	return PlayerManager::Get()->GetPlayerByID(PlayerID);
+}
+
+////////////////////
+////////////////////
+
+unsigned short ProxyActor::GetID() {
+	unsigned short networkid = (unsigned short)(*(unsigned int*)((unsigned int)this->cactor+184));
+	//std::cout << "ProxyActor::GetID networkid = " << networkid << std::endl;
+	return networkid;
+}
+unsigned char ProxyActor::GetType() {
+	unsigned char type = (unsigned char)(*(unsigned int*)((unsigned int)this->cactor+72));
+	//std::cout << "ProxyActor::GetType type = " << (int)type << std::endl;
+	return type;
+}
+std::shared_ptr<ProxyPlayer> ProxyActor::GetPlayer() {
+	//TODO: use __CRunnerToID instead
+	unsigned int PlayerPTR = *(unsigned int*)((unsigned int)this->cactor+220);
+	if (!PlayerPTR) return nullptr;
+	unsigned int PlayerID = (*(unsigned short int*)(PlayerPTR+120));
+	return PlayerManager::Get()->GetPlayerByID(PlayerID);
+}
+
 ////////////////////
 ////////////////////
 

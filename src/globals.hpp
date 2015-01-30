@@ -48,26 +48,28 @@ extern void  sServer_AddBot      (unsigned int team, unsigned int cls, const cha
 extern void  sServer_AddBlob     (const char* blobtype, const char* filepath, float x , float y, unsigned int team);
 extern void  sServer_RestartMatch();
 
-extern DWORD sPlayer_GetID       (void* CPlayer);
-extern DWORD sPlayer_GetSeclev   (void* CPlayer);
-extern bool  sPlayer_IsBot       (void* CPlayer);
-extern float sPlayer_GetPosX     (void* CPlayer);
-extern float sPlayer_GetPosY     (void* CPlayer);
-extern char  sPlayer_GetClass    (void* CPlayer);
-extern char* sPlayer_GetName     (void* CPlayer); // username
-extern char* sPlayer_GetClantag  (void* CPlayer); // clantag
-extern char* sPlayer_GetCharName (void* CPlayer); // clantag + username
-extern DWORD sPlayer_GetNetworkID(void* CPlayer);
-extern DWORD sPlayer_GetHost     (void* CPlayer);
-extern char* sPlayer_GetIP       (void* CPlayer);
-extern byte  sPlayer_GetTeam     (void* CPlayer);
-extern WORD  sPlayer_GetCoins    (void* CPlayer);
-extern byte  sPlayer_GetStone    (void* CPlayer);
-extern byte  sPlayer_GetWood     (void* CPlayer);
-extern byte  sPlayer_GetGold     (void* CPlayer);
-extern byte  sPlayer_GetArrows   (void* CPlayer);
-extern byte  sPlayer_GetBombs    (void* CPlayer);
-extern float sPlayer_GetHealth   (void* CPlayer);
+extern DWORD sPlayer_GetID              (void* CPlayer);
+extern DWORD sPlayer_GetSeclev          (void* CPlayer);
+extern bool  sPlayer_IsBot              (void* CPlayer);
+extern float sPlayer_GetPosX            (void* CPlayer);
+extern float sPlayer_GetPosY            (void* CPlayer);
+extern unsigned int sPlayer_GetIdleTime (void* CPlayer);
+extern char  sPlayer_GetClass           (void* CPlayer);
+extern void* sPlayer_GetRunner          (void* CPlayer);
+extern char* sPlayer_GetName            (void* CPlayer); // username
+extern char* sPlayer_GetClantag         (void* CPlayer); // clantag
+extern char* sPlayer_GetCharName        (void* CPlayer); // clantag + username
+extern DWORD sPlayer_GetNetworkID       (void* CPlayer);
+extern DWORD sPlayer_GetHost            (void* CPlayer);
+extern char* sPlayer_GetIP              (void* CPlayer);
+extern byte  sPlayer_GetTeam            (void* CPlayer);
+extern WORD  sPlayer_GetCoins           (void* CPlayer);
+extern byte  sPlayer_GetStone           (void* CPlayer);
+extern byte  sPlayer_GetWood            (void* CPlayer);
+extern byte  sPlayer_GetGold            (void* CPlayer);
+extern byte  sPlayer_GetArrows          (void* CPlayer);
+extern byte  sPlayer_GetBombs           (void* CPlayer);
+extern float sPlayer_GetHealth          (void* CPlayer);
 
 // new!
 extern void  sPlayer_ChangeTeam  (void* CPlayer, DWORD team);
