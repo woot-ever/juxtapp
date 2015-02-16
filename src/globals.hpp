@@ -77,6 +77,7 @@ extern void  sPlayer_SetScore    (void* CPlayer, WORD score);
 extern WORD  sPlayer_GetScore    (void* CPlayer);
 extern bool  sPlayer_CheckFeature(void* CPlayer, const char* feature);
 extern bool  sPlayer_CheckCommand(void* CPlayer, const char* command);
+extern bool  sPlayer_IsKeyDown   (void* CPlayer, unsigned char key);
 
 // new!
 extern DWORD sServer_GetUnits    (byte team);

@@ -36,7 +36,7 @@ public:
 	
 	unsigned short GetID();
 	unsigned char GetType();
-	std::shared_ptr<ProxyPlayer> GetPlayer();;
+	std::shared_ptr<ProxyPlayer> GetPlayer();
 };
 
 class ProxyBlob
@@ -75,6 +75,9 @@ public:
 	std::map<std::string, float> vars_float;
 	std::map<std::string, bool> vars_bool;
 	std::map<std::string, LuaGlueLuaValue> vars_table;
+	
+	bool keys[15];
+	bool oldkeys[15];
 	
 	unsigned int speedhack_ticks;
 	unsigned int attackhack_ticks;
@@ -170,6 +173,10 @@ public:
 	double GetNumber(const char* name) { return this->vars_number[name]; }
 	std::string GetString(const char* name) { return this->vars_string[name]; }
 	LuaGlueLuaValue GetTable(const char* name) { return this->vars_table[name]; }
+	
+	bool IsKeyDown(unsigned char k) { return sPlayer_IsKeyDown(this->cplayer, k); }
+	bool WasKeyPressed(unsigned char k) { return this->keys[k] && !this->oldkeys[k]; }
+	bool WasKeyReleased(unsigned char k) { return this->oldkeys[k] && !this->keys[k]; }
 };
 
 ////////////////////

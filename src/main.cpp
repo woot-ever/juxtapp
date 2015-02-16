@@ -93,6 +93,7 @@ static int (*o_ZN14CPlayerManager12RemovePlayerEP7CPlayer)(void*, void*) = 0;
 static int (*o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer)(void*,void*,void*) = 0;
 static void* (*o_ZN9CSecurityC1Ev)(void*) = 0;
 static int (*o_ZN7CRunner6DoTickEv) (void*) = 0;
+static void (*o_ZN14CPlayerManager6UpdateEv) (void*) = 0;
 static void* (*o_ZN7CRunner5ThinkEv) (void*) = 0;
 static void* (*o_ZN4CNetC1Ev)(void*) = 0;
 static void* (*o_ZN7CScriptC1Ev)(void*) = 0;
@@ -121,6 +122,7 @@ static void* (*o_ZN5CBlobD0Ev) (void*) = 0;
 static void* (*o_ZN5CBlobD1Ev) (void*) = 0;
 static void* (*o_ZN5CBlobD2Ev) (void*) = 0;
 static void* (*o_ZN6CActor11CreateActorEPKcS1_iS1_) (void*, const char*, const char*, int, const char*) = 0;
+static void* (*o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer) (void*, const char*, unsigned char, void*) = 0;
 static void* (*o_ZN6CActor7DestroyEv) (void*) = 0;
 static void* (*o_ZN6CActor4KillEv) (void*) = 0;
 static void* (*o_ZN6CActor4LoadEv) (void*) = 0;
@@ -128,6 +130,8 @@ static void* (*o_ZN7CPlayer10ChangeTeamEi) (void*, int) = 0;
 static void* (*o_ZN6CActor7setTeamEt) (void*, unsigned short) = 0;
 static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (void*, void*&, void*) = 0;
 static void (*o_ZN4CNet18server_SendRespawnEjP9_ENetPeer) (void*, unsigned int, void*) = 0;
+static void (*o_ZN5CRoom9BuildRoomEhP7CRunner) (void*, unsigned char, void*) = 0;
+static void (*o_ZN7CRunner11changeClassE5Vec2fi) (void*, Vec2f, int) = 0;
 static int (*o_accept) (int, struct sockaddr*, socklen_t*) = 0;
 
 // detour xD
@@ -170,7 +174,6 @@ typedef int (*_CRunner__Kill_) (void* runner);
 typedef int (*_CRunner__Gib_) (void* runner);
 typedef int (*_CNet__server_SendRespawn_) (void* CNet, unsigned int sumtim, void* ENetPeer);
 typedef int (*_CRunner__setPosition_) (void* runner, float x, float y);
-//typedef int (*_CPlayer__ChangeTeam_) (void* player, WORD team);
 typedef int (*_CNet__server_SendMsg_) (void* CNet, WideString wchar_string, void* ENetPeer, byte wut);
 typedef int (*_CNet__server_SendSecurityCheck_) (void* CNet, void* ENetPeer);
 typedef int (*_IC_Console__externalCommandString_) (void* ICConsole, WideString command); 
@@ -186,7 +189,6 @@ _CRunner__Kill_                     _CRunner__Kill                           = N
 _CRunner__Gib_                      _CRunner__Gib                            = NULL;
 _CNet__server_SendRespawn_          _CNet__server_SendRespawn                = NULL;
 _CRunner__setPosition_              _CRunner__setPosition                    = NULL;
-//_CPlayer__ChangeTeam_               _CPlayer__ChangeTeam                     = NULL;
 _CNet__server_SendMsg_              _CNet__server_SendMsg                    = NULL;
 _CNet__server_SendSecurityCheck_    _CNet__server_SendSecurityCheck          = NULL;
 _IC_Console__externalCommandString_ _IC_Console__externalCommandString       = NULL;
@@ -537,6 +539,7 @@ void sPlayer_SetPosition(void* CPlayer, float x, float y)
 void sPlayer_SetStone(void* CPlayer, byte amount)
 {
 	if (!CPlayer) return;
+	std::cout << CPlayer << std::endl;
 	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(byte *)((DWORD)_r + 800) = amount;
@@ -811,24 +814,6 @@ myfunc(int,CEgg__SendCatapult,void* dis, float x1, float y1, float x2, float y2,
 // ONCHANGETEAM HERE
 // ---------------
 // ---------------
-/*
-myfunc(int,CPlayer__ChangeTeam,void* dis, DWORD team)
-{
-	unsigned int playerID = __CPlayerToID(dis);
-	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
-	if (pp)
-	{
-		PluginManager::Get()->OnPlayerChangeTeam(pp, team);
-	}
-	return o_CPlayer__ChangeTeam(dis,team);
-}
-*/
-void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
-{
-	if (!CPlayer) return;
-	//o_CPlayer__ChangeTeam(CPlayer,team);
-}
-
 void sPlayer_SetScore(void* CPlayer, WORD score)
 {
 	if (!CPlayer) return;
@@ -838,6 +823,24 @@ void sPlayer_SetScore(void* CPlayer, WORD score)
 WORD sPlayer_GetScore(void* CPlayer)
 {
 	return CPlayer ? *(WORD*)((*(DWORD *)((DWORD)CPlayer + 128))) : 0;
+}
+
+void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
+{
+	if (!CPlayer) return;
+	//o_CPlayer__ChangeTeam(CPlayer,team);
+}
+
+myfunc(int,CPlayer__ChangeTeam,void* dis, DWORD team)
+{
+	std::cout << "MYFUNC CPlayer__ChangeTeam " << std::endl;
+	unsigned int playerID = __CPlayerToID(dis);
+	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
+	if (pp)
+	{
+		PluginManager::Get()->OnPlayerChangeTeam(pp, team);
+	}
+	return o_CPlayer__ChangeTeam(dis,team);
 }
 
 // ON PLAYER DIE
@@ -885,9 +888,6 @@ myfunc(void,CRules__StartMatch,void* CRules)
 	o_CRules__StartMatch(CRules);
 }
 
-DWORD fucking_ticks_counter = 0;
-DWORD fucking_seconds_counter = 0;
-
 void* nettask_ptr = NULL;
 
 mirror(void,CNetworkTask__Stop,void* cnettask);
@@ -912,17 +912,6 @@ myfunc(int,CRules__Think,void* CRules)
 	if (!rules_ptr)
 		rules_ptr = CRules;
 	
-	fucking_ticks_counter++;
-	if (fucking_ticks_counter>=30)
-	{
-		fucking_ticks_counter = 0;
-		if (fucking_seconds_counter<70) fucking_seconds_counter++;
-		if (fucking_seconds_counter>=60)
-		{
-
-		}
-	}
-	
 	server_ticks++;
 	PluginManager::Get()->OnServerTick(server_ticks);
 	
@@ -937,6 +926,39 @@ DWORD sServer_GetUnits(byte team)
 	if (!rules_ptr)
 		return 0;
 	return _CRules__unitsLeftForTeam(rules_ptr,team);
+}
+
+unsigned int GetKeyAddress(unsigned char key)
+{
+	unsigned int kaddr = 0;
+	switch(key) {
+		case 0: kaddr = 733; break; // up
+		case 1: kaddr = 734; break; // down
+		case 2: kaddr = 735; break; // left
+		case 3: kaddr = 736; break; // right
+		case 4: kaddr = 737; break; // action
+		case 5: kaddr = 738; break; // action2
+		case 6: kaddr = 739; break; // zoomin
+		case 7: kaddr = 740; break; // zoomout
+		case 8: kaddr = 741; break; // use
+		case 9: kaddr = 742; break; // change
+		case 10: kaddr = 743; break; // drop
+		case 11: kaddr = 744; break; // taunts
+		case 12: kaddr = 745; break; // bubbles
+		case 13: kaddr = 746; break; // menu
+		case 14: kaddr = 747; break; // party
+	}
+	return kaddr;
+}
+
+bool sPlayer_IsKeyDown(void* player, unsigned char key)
+{
+	unsigned int kaddr = GetKeyAddress(key);
+	if (!kaddr) return false; // invalid key
+	void* runner = __CPlayerToCRunner(player);
+	if (!runner) return false; // no runners
+	byte k = *(byte*)((DWORD)runner+kaddr);
+	return k == 1;
 }
 
 bool sPlayer_CheckFeature(void* CPlayer, const char* feature)
@@ -1017,7 +1039,7 @@ void HookFunctions(void* handle)
 	detour(CRules__StartMatch,_ZN6CRules10StartMatchEv,6);
 	detour(CRules__OnPlayerRespawn,_ZN6CRules15OnPlayerRespawnEP18CRespawnQueueActor,7);
 	detour(CRules__OnPlayerDie,_ZN6CRules11OnPlayerDieEP7CPlayerS1_h,5);
-	//detour(CPlayer__ChangeTeam,_ZN7CPlayer10ChangeTeamEi,6);
+	detour(CPlayer__ChangeTeam,_ZN7CPlayer10ChangeTeamEi,6);
 	detour(CRunner__UpdateVisuals,_ZN7CRunner13UpdateVisualsEv,5);
 	detour(CEgg__Send_Delta,_ZN4CEgg10Send_DeltaEP10CBitStreamS1_S1_,5);
 	detour(CEgg__getMovementSignificance,_ZN4CEgg23getMovementSignificanceEv,6);
@@ -1031,7 +1053,7 @@ void HookFunctions(void* handle)
 	detour(CPlayer__customHeadsCheck,_ZN7CPlayer16customHeadsCheckEv,6);
 	detour(CPlayerManager__MakeUniqueName,_ZN14CPlayerManager14MakeUniqueNameERN3irr4core6stringIcNS1_12irrAllocatorIcEEEEP7CPlayerib,5);
 	detour(CNetFiles__CNetFiles,_ZN9CNetFilesC1Ev,6);
-	detour(CNetFiles__SendFile,_ZN9CNetFiles8SendFileEPKchP9_ENetPeer,5);	
+	//detour(CNetFiles__SendFile,_ZN9CNetFiles8SendFileEPKchP9_ENetPeer,5);	
 	detour(CRunner__getMovementSignificance,_ZN7CRunner23getMovementSignificanceEv,6);		
 	detour(CNetworkTask__Start,_ZN12CNetworkTask5StartEv,5);
 	//detour(CPlayerManager__CastVote,_ZN14CPlayerManager8CastVoteEhtPKw,5);
@@ -1054,7 +1076,6 @@ void HookFunctions(void* handle)
 	hook(CRunner__Gib,_ZN7CRunner3GibEv);
 	hook(CNet__server_SendRespawn,_ZN4CNet18server_SendRespawnEjP9_ENetPeer);
 	hook(CRunner__setPosition,_ZN7CRunner11setPositionE5Vec2f);
-	//hook(CPlayer__ChangeTeam, _ZN7CPlayer10ChangeTeamEi);
 	hook(CNet__server_SendMsg,_ZN4CNet14server_SendMsgEN3irr4core6stringIwNS1_12irrAllocatorIwEEEEP9_ENetPeerh);
 	hook(IC_Console__externalCommandString,_ZN10IC_Console21externalCommandStringEN3irr4core6stringIwNS1_12irrAllocatorIwEEEE);
 	hook(IC_Console__addx,_ZN10IC_Console4addxEPKcz);
@@ -1072,6 +1093,7 @@ void HookFunctions(void* handle)
 	o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer = (int(*)(void*, void*, void*))o_dlsym(handle, "_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer");
 	o_ZN9CSecurityC1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN9CSecurityC1Ev");
 	o_ZN7CRunner6DoTickEv = (int(*)(void*))o_dlsym(handle, "_ZN7CRunner6DoTickEv");
+	o_ZN14CPlayerManager6UpdateEv = (void(*)(void*))o_dlsym(handle, "_ZN14CPlayerManager6UpdateEv");
 	o_ZN7CRunner5ThinkEv = (void*(*)(void*))o_dlsym(handle, "_ZN7CRunner5ThinkEv");
 	o_ZN4CNetC1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN4CNetC1Ev");
 	o_ZN7CScriptC1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN7CScriptC1Ev");
@@ -1088,6 +1110,8 @@ void HookFunctions(void* handle)
 	o_ZN10CWorldTask7DropEggEi5Vec2fii = (void*(*)(void*, int, Vec2f, int, int))o_dlsym(handle, "_ZN10CWorldTask7DropEggEi5Vec2fii");
 	o_ZN7CRunner10recdStrikeER10CBitStreamPS_ = (bool(*)(void*, void*&, void*))o_dlsym(handle, "_ZN7CRunner10recdStrikeER10CBitStreamPS_");
 	o_ZN4CNet18server_SendRespawnEjP9_ENetPeer = (void(*)(void*, unsigned int, void*))o_dlsym(handle, "_ZN4CNet18server_SendRespawnEjP9_ENetPeer");
+	o_ZN5CRoom9BuildRoomEhP7CRunner = (void(*)(void*, unsigned char, void*))o_dlsym(handle, "_ZN5CRoom9BuildRoomEhP7CRunner");
+	o_ZN7CRunner11changeClassE5Vec2fi = (void(*)(void*, Vec2f, int))o_dlsym(handle, "_ZN7CRunner11changeClassE5Vec2fi");
 	o_accept = (int(*)(int, struct sockaddr*, socklen_t*))o_dlsym(handle, "accept");
 	//o_ZN14CPlayerManager8CastVoteEhtPKw = (void*(*)(void*, irr::u8, irr::u16, const wchar_t *))o_dlsym(handle, "_ZN14CPlayerManager8CastVoteEhtPKw");
 	o_ZN4CEgg5MountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN4CEgg5MountEP6CActor");
@@ -1102,6 +1126,7 @@ void HookFunctions(void* handle)
 	o_ZN5CBlobD1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD1Ev");
 	o_ZN5CBlobD2Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD2Ev");
 	o_ZN6CActor11CreateActorEPKcS1_iS1_ = (void*(*)(void*, const char*, const char*, int, const char*))o_dlsym(handle, "_ZN6CActor11CreateActorEPKcS1_iS1_");
+	o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer = (void*(*)(void*, const char*, unsigned char, void*))o_dlsym(handle, "_ZN9CNetFiles8SendFileEPKchP9_ENetPeer");
 	o_ZN6CActor7DestroyEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor7DestroyEv");
 	o_ZN6CActor4KillEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor4KillEv");
 	o_ZN6CActor4LoadEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor4LoadEv");
@@ -1288,6 +1313,14 @@ extern "C" void* _ZN6CActor11CreateActorEPKcS1_iS1_(void* that, const char* a, c
 	return o_ZN6CActor11CreateActorEPKcS1_iS1_(that, a, b, c, d);
 }
 
+extern "C" void* _ZN9CNetFiles8SendFileEPKchP9_ENetPeer(void* that, const char* a, unsigned char b, void* c)
+{
+	std::cout << "_ZN9CNetFiles8SendFileEPKchP9_ENetPeer " << that << std::endl;
+	std::cout << "a = " << a << std::endl;
+	std::cout << "b = " << (int)b << std::endl;
+	return o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer(that, a, b, c);
+}
+
 extern "C" void _ZN6CActor7DestroyEv(void* that)
 {
 	/*std::cout << "_ZN6CActor7DestroyEv " << that << std::endl;
@@ -1310,12 +1343,6 @@ extern "C" void _ZN6CActor4LoadEv(void* that)
 {
 	//std::cout << "_ZN6CActor4LoadEv " << that << std::endl;
 	o_ZN6CActor4LoadEv(that);
-}
-
-extern "C" void _ZN7CPlayer10ChangeTeamEi(void* that, int team)
-{
-	//std::cout << "_ZN7CPlayer10ChangeTeamEi " << team << std::endl;
-	o_ZN7CPlayer10ChangeTeamEi(that, team);
 }
 
 extern "C" void _ZN6CActor7setTeamEt(void* that, unsigned short team)
@@ -1462,12 +1489,12 @@ int naive_char_2_int(const char *p) {
 void sPlayer_SetName(void* CPlayer,const char* newname);
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// FOR EVERNT: onplayerspeak
+// FOR EVENT: onplayertalk
 extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitStream)
 {
 	// use this variable ;_; cuz its needed to delete _message after use
 	bool do_send = true;
-
+	
 	std::vector<unsigned char>* buffer = (std::vector<unsigned char>*)(pBitStream);
 	// 10 is the minimum size of sendchat packet
 	if (buffer->size() > 9)
@@ -1598,6 +1625,11 @@ extern "C" int _ZN7CRunner5ThinkEv(void* that)
 	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
 	if (pp)
 	{
+		for (unsigned int i=0; i<10; i++) {
+			pp->oldkeys[i] = pp->keys[i];
+			pp->keys[i] = sPlayer_IsKeyDown(pp->cplayer, i);
+		}
+		
 		pp->speedhack_ticks++;
 		pp->attackhack_ticks++;
 		pp->ticks++;
@@ -1641,6 +1673,22 @@ extern "C" void _ZN4CNet18server_SendRespawnEjP9_ENetPeer(void* that, unsigned i
 	return o_ZN4CNet18server_SendRespawnEjP9_ENetPeer(that, a, b);
 }
 
+extern "C" void _ZN5CRoom9BuildRoomEhP7CRunner(void* that, unsigned char a, void* b)
+{
+	unsigned int playerID = __CRunnerToID(b);
+	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
+	if (!PluginManager::Get()->OnRoomBuild(a, pp)) return;
+	return o_ZN5CRoom9BuildRoomEhP7CRunner(that, a, b);
+}
+
+extern "C" void _ZN7CRunner11changeClassE5Vec2fi(void* that, Vec2f a, int b)
+{
+	unsigned int playerID = __CRunnerToID(that);
+	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
+	if (!PluginManager::Get()->OnPlayerChangeClass(pp, b)) return;
+	return o_ZN7CRunner11changeClassE5Vec2fi(that, a, b);
+}
+
 extern "C" bool _ZN7CRunner10recdStrikeER10CBitStreamPS_(void *that, void*& a, void* b)
 {
 	if (JuxtaConfig::Get()->speedhack_max_warnings > -1)
@@ -1665,6 +1713,11 @@ extern "C" bool _ZN7CRunner10recdStrikeER10CBitStreamPS_(void *that, void*& a, v
 extern "C" int _ZN7CRunner6DoTickEv(void* that)
 {
 	return o_ZN7CRunner6DoTickEv(that);
+}
+
+extern "C" void _ZN14CPlayerManager6UpdateEv(void* that)
+{
+	return o_ZN14CPlayerManager6UpdateEv(that);
 }
 
 void sServer_Command(const char* cmd)
@@ -1833,12 +1886,17 @@ void sPlayer_SetClantag(void* CPlayer, const char* newtag)
 {
 	if (!CPlayer) return;
 	
+	const char* name = (char*)(*(unsigned int*)((unsigned int)CPlayer + 156));
+	const char* newCharName = std::string(std::string(newtag) + std::string(" ") + std::string(name)).c_str();
+	
 	String* nc = (String*)((DWORD)CPlayer+200);
 	*nc = newtag;
 	
 	String* ncn = (String*)((DWORD)CPlayer+244);
-	const char* name = (char*)(*(unsigned int*)((unsigned int)CPlayer + 156));
-	*ncn = std::string(std::string(newtag) + std::string(" ") + std::string(name)).c_str();
+	*ncn = newCharName;
+	
+	String* ocn = (String*)((DWORD)CPlayer+364);
+	*ocn = newCharName;
 }
 
 void sPlayer_SetName(void* CPlayer,const char* newname)

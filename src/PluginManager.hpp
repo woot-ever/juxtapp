@@ -34,6 +34,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
 
 class Blocks {};
 class Teams {};
+class Keys {};
 class ActorTypes {};
 
 ////////////////////
@@ -293,6 +294,8 @@ public:
 	
 	std::vector<std::shared_ptr<Plugin>> plugins;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerTalk;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnRoomBuild;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerChangeClass;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerDie;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnActorDie;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerTick;
@@ -338,6 +341,8 @@ public:
 	bool OnPlayerTalk(std::shared_ptr<ProxyPlayer>, char*);
 	bool OnPlayerAttack(std::shared_ptr<ProxyPlayer>);
 	void OnPlayerTick(std::shared_ptr<ProxyPlayer>, unsigned int);
+	bool OnRoomBuild(unsigned char, std::shared_ptr<ProxyPlayer>);
+	bool OnPlayerChangeClass(std::shared_ptr<ProxyPlayer>, int);
 	void OnPlayerDie(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyPlayer>, unsigned char);
 	void OnActorDie(std::shared_ptr<ProxyBlob>);
 	float OnBlobHit(std::shared_ptr<ProxyBlob>, std::shared_ptr<ProxyActor>, float);
@@ -481,6 +486,8 @@ void PluginManager::UnloadAll()
 	}
 	
 	this->pluginsOnPlayerTalk.clear();
+	this->pluginsOnRoomBuild.clear();
+	this->pluginsOnPlayerChangeClass.clear();
 	this->pluginsOnPlayerAttack.clear();
 	this->pluginsOnPlayerDie.clear();
 	this->pluginsOnActorDie.clear();
@@ -594,6 +601,8 @@ void PluginManager::LoadPlugin(std::string name)
 		oss << "Loaded plugin " << name;
 		this->plugins.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerTalk")) this->pluginsOnPlayerTalk.push_back(plugin);
+		if (plugin->state.globalExists("OnRoomBuild")) this->pluginsOnRoomBuild.push_back(plugin);
+		if (plugin->state.globalExists("OnPlayerChangeClass")) this->pluginsOnPlayerChangeClass.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerAttack")) this->pluginsOnPlayerAttack.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerDie")) this->pluginsOnPlayerDie.push_back(plugin);
 		if (plugin->state.globalExists("OnActorDie")) this->pluginsOnActorDie.push_back(plugin);
@@ -727,6 +736,36 @@ bool PluginManager::OnPlayerTalk(std::shared_ptr<ProxyPlayer> player, char* msg)
 	{
 		this->currentPlugin = p;
 		ret = p->state.invokeFunction<int>("OnPlayerTalk", player, (const char*)msg);
+		if (ret == 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool PluginManager::OnRoomBuild(unsigned char a, std::shared_ptr<ProxyPlayer> player)
+{
+	int ret = 0;
+	for (std::shared_ptr<Plugin> p : this->pluginsOnRoomBuild)
+	{
+		this->currentPlugin = p;
+		ret = p->state.invokeFunction<int>("OnRoomBuild", a, player);
+		if (ret == 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool PluginManager::OnPlayerChangeClass(std::shared_ptr<ProxyPlayer> player, int cls)
+{
+	int ret = 0;
+	for (std::shared_ptr<Plugin> p : this->pluginsOnPlayerChangeClass)
+	{
+		this->currentPlugin = p;
+		ret = p->state.invokeFunction<int>("OnPlayerChangeClass", player, cls);
 		if (ret == 0)
 		{
 			return false;
@@ -1163,7 +1202,7 @@ Plugin::Plugin(std::string name, std::string path)
 			{"BEDROCK", 106},
 			{"DIRT", 16},
 			{"DIRT_BACK", 32},
-			{"GOLD_NUGGET", 80},
+			{"GOLD", 80},
 			{"ROCK", 96},
 			{"THICK_ROCK", 208},
 			{"TREE", 119},
@@ -1189,6 +1228,26 @@ Plugin::Plugin(std::string name, std::string path)
 		})
 	.end();
 	
+	this->state.Class<Keys>("Keys").
+		constants({
+			{"UP", 0},
+			{"DOWN", 1},
+			{"LEFT", 2},
+			{"RIGHT", 3},
+			{"ACTION", 4},
+			{"ACTION2", 5},
+			{"ZOOMIN", 6},//not working
+			{"ZOOMOUT", 7},//not working
+			{"USE", 8},
+			{"CHANGE", 9},
+			{"DROP", 10},
+			{"TAUNTS", 11},//not working
+			{"BUBBLES", 12},//not working
+			{"MENU", 13},//not working
+			{"PARTY", 14},//not working
+		})
+	.end();
+	
 	this->state.Class<ProxyPlugin>("Plugin")
 		.method("GetName", &ProxyPlugin::GetName)
 		.method("GetPath", &ProxyPlugin::GetPath)
@@ -1197,16 +1256,6 @@ Plugin::Plugin(std::string name, std::string path)
 	this->state.Class<ProxyJuxta>("Juxta")
 		.method("GetVersion", &ProxyJuxta::GetVersion)
 	.end();
-	
-	/*
-	this->state.Class<ProxyBlob>("Actor")
-		.method("GetType", &ProxyBlob::GetType)
-	.end();
-	
-	this->state.Class<ProxyBlob>("Blob")
-		.method("GetType", &ProxyBlob::GetType)
-	.end();
-	*/
 	
 	this->state.Class<ProxyActor>("Actor")
 		.method("GetID", &ProxyActor::GetID)
@@ -1285,6 +1334,10 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetNumber", &ProxyPlayer::GetNumber)
 		.method("GetString", &ProxyPlayer::GetString)
 		.method("GetTable", &ProxyPlayer::GetTable)
+		
+		.method("IsKeyDown", &ProxyPlayer::IsKeyDown)
+		.method("WasKeyPressed", &ProxyPlayer::WasKeyPressed)
+		.method("WasKeyReleased", &ProxyPlayer::WasKeyReleased)
 	.end();
 	
 	this->state.Class<ProxyKAG>("KAG")
@@ -1332,11 +1385,13 @@ Plugin::Plugin(std::string name, std::string path)
 	this->state.doString(std::string(std::string("_G[\"__dirname\"] = \"") + PluginManager::Get()->workingDir + path + std::string("\"")).c_str());
 	
 	// add current plugin path to package.path
-	std::string pluginPackagePath = std::string("package.path = \";") + PluginManager::Get()->workingDir + path + std::string("/?.lua\" .. package.path");
+	std::string pluginPackagePath = std::string("package.path = \"../") + path + std::string("/?.lua;\" .. package.path");
+	std::cout << "pluginPackagePath = " << pluginPackagePath << std::endl;
 	this->state.doString(pluginPackagePath.c_str());
 	
 	// add libs path
-	std::string libsPackagePath = std::string("package.path = \";") + PluginManager::Get()->workingDir + std::string("Plugins/__libs/?.lua\" .. package.path");
+	std::string libsPackagePath = std::string("package.path = \"../Plugins/__libs/?.lua;\" .. package.path");
+	std::cout << "libsPackagePath = " << libsPackagePath << std::endl;
 	this->state.doString(libsPackagePath.c_str());
 	
 	// lua sandbox
