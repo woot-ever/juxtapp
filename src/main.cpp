@@ -918,7 +918,7 @@ myfunc(int,CRules__Think,void* CRules)
 	return o_CRules__Think(CRules);
 }
 
-mirror(DWORD,CRules__unitsLeftForTeam,void* CRules,byte team);
+mirror(byte,CRules__unitsLeftForTeam,void* CRules,byte team);
 //mirror(int,CPlayerManager__CastVote,void* CPlayerManager, irr::u8 a, irr::u16 b, const wchar_t * c);
 
 DWORD sServer_GetUnits(byte team)
@@ -1936,7 +1936,7 @@ char* sPlayer_GetIP(void* CPlayer)
 	unsigned int temp = *(unsigned int*)((unsigned int)CPlayer + 124);
 	if (!temp) return NULL;
 	temp = *(unsigned int*)(temp + 24); // xxx.xxx.xxx.xxx
-	sprintf(sIPresult,"%i.%i.%i.%i",(unsigned char)(temp),*(unsigned char*)(&temp+1),*(unsigned char*)(&temp+2),*(unsigned char*)(&temp+3));
+	sprintf(sIPresult,"%d.%d.%d.%d",temp & 0xFF, (temp >> 8) & 0xFF, (temp >> 16) & 0xFF, (temp >> 24) & 0xFF);
 	return sIPresult;
 }
 
