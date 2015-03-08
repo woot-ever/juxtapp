@@ -216,6 +216,30 @@ void *DetourFunc( void *src, void *dst, const int len )
     return ( jmp - len );
 }
 
+void NopAddr( void *src, const int len )
+{
+    //byte *jmp = (byte*)malloc( len );
+	//unsigned long mallocpage = (unsigned long)jmp & ~(sysconf(_SC_PAGESIZE)-1);
+    //mprotect((void*)mallocpage, 5+len, PROT_READ|PROT_WRITE|PROT_EXEC);
+	unsigned long page = (unsigned long)src & ~(sysconf(_SC_PAGESIZE)-1);
+    mprotect((void*)page, len, PROT_READ|PROT_WRITE|PROT_EXEC);
+	
+	for (int i = 0; i < len; i++)
+	{
+		*(byte*)(((DWORD)src)+i) = 0x90;
+	}
+	
+    //memcpy( jmp, src, len );
+    //jmp += len;
+//jmp[0] = 0x90;
+	
+   // *(DWORD*)( jmp + 1 ) = (DWORD)( (unsigned int)src + len - (unsigned int)jmp ) - 5;
+	//unsigned char* p = (unsigned char*)src;
+   // p[0] = 0xE9;
+   // *(unsigned long*)(p+1) = (DWORD)( (unsigned int)dst - (unsigned int)src ) - 5;
+   // return ( jmp - len );
+}
+
 void* __CPlayerToCRunner(void* rpointer);
 unsigned int __CPlayerToID(void* rpointer);
 
@@ -280,8 +304,73 @@ o_CPlayerManager__MakeUniqueName_ o_CPlayerManager__MakeUniqueName = NULL;
 
 #define mExists(m,a) ( m.find(a) != m.end() )
 
+std::map <void*,byte> forcing_heads;
+
+void sPlayer_ForceHead(void* CPlayer, byte head)
+{
+	if (!CPlayer) return;
+	forcing_heads[CPlayer] = head;
+	if (head==0xFF)
+		forcing_heads.erase(CPlayer);
+}
+
+byte sPlayer_GetHead(void* CPlayer)
+{
+	if (!CPlayer) return 0;
+	return *(byte*)((unsigned int)CPlayer + 283);
+}
+
+void sPlayer_SetSpecialColor(void* CPlayer, byte color)
+{
+	if (!CPlayer) return;
+	*(byte*)((unsigned int)CPlayer + 362) = 0;
+	*(byte*)((unsigned int)CPlayer + 363) = 0;
+	
+	if (color==0) // normal
+		*(byte*)((unsigned int)CPlayer + 361) = 0;
+	else if (color==1) // premium
+		*(byte*)((unsigned int)CPlayer + 361) = 1;
+	else if (color==2) // guard
+		*(byte*)((unsigned int)CPlayer + 362) = 1;
+	else if (color==3) // kag_staff
+		*(byte*)((unsigned int)CPlayer + 363) = 1;
+}
+
+byte sPlayer_GetSpecialColor(void* CPlayer)
+{
+	if (!CPlayer) return 0;
+	
+	if (*(byte*)((unsigned int)CPlayer + 363))
+		return 3;
+	else if (*(byte*)((unsigned int)CPlayer + 362))
+		return 2;
+	else if (*(byte*)((unsigned int)CPlayer + 361))
+		return 1;
+	else
+		return 0;
+}
+
+void sPlayer_SetSex(void* CPlayer, byte sex)
+{
+	if (!CPlayer) return;
+	*(byte*)((unsigned int)CPlayer + 282) = sex;
+}
+
+byte sPlayer_GetSex(void* CPlayer)
+{
+	if (!CPlayer) return 0;
+	return *(byte*)((unsigned int)CPlayer + 282);
+}
+
+WORD sPlayer_GetPing(void* CPlayer)
+{
+	if (!CPlayer) return 0;
+	return *(WORD*)((unsigned int)CPlayer + 302);
+}
+
 int my_CPlayerManager__MakeUniqueName(int a1, String a2, int a3, int a4)
 {
+
 	int iid = __CPlayerToID((void*)a3);
 	int result = 0;
 	if (iid>0)
@@ -289,6 +378,25 @@ int my_CPlayerManager__MakeUniqueName(int a1, String a2, int a3, int a4)
 		if (sPlayer_CheckFeature((void*)a3, "staff_color")) {
 			*(byte*)((unsigned int)a3 + 363) = 1; // set staff flag to 1
 		}
+		if (sPlayer_CheckFeature((void*)a3, "guard_color")) {
+			*(byte*)((unsigned int)a3 + 362) = 1; // set mod flag to 1
+		}
+		
+		if mExists(forcing_heads,(void*)a3)
+		{
+			*(byte*)((unsigned int)a3 + 283) = forcing_heads[(void*)a3];
+			if (forcing_heads[(void*)a3]<5)
+			{
+				if (forcing_heads[(void*)a3]==2)
+					*(byte*)((unsigned int)a3 + 362) = 1;
+				else
+				{
+					*(byte*)((unsigned int)a3 + 362) = 0;
+					*(byte*)((unsigned int)a3 + 363) = 1;
+				}
+			}
+		}
+		
 		std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(iid);
 		if (pp)
 		{
@@ -825,12 +933,6 @@ WORD sPlayer_GetScore(void* CPlayer)
 	return CPlayer ? *(WORD*)((*(DWORD *)((DWORD)CPlayer + 128))) : 0;
 }
 
-void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
-{
-	if (!CPlayer) return;
-	//o_CPlayer__ChangeTeam(CPlayer,team);
-}
-
 myfunc(int,CPlayer__ChangeTeam,void* dis, DWORD team)
 {
 	std::cout << "MYFUNC CPlayer__ChangeTeam " << std::endl;
@@ -841,6 +943,45 @@ myfunc(int,CPlayer__ChangeTeam,void* dis, DWORD team)
 		PluginManager::Get()->OnPlayerChangeTeam(pp, team);
 	}
 	return o_CPlayer__ChangeTeam(dis,team);
+}
+
+myfunc(int,CRules__OnPlayerJoin,void* rulesptr, void* CPlayer)
+{
+	int a_t = *(byte*)((DWORD)CPlayer+292);
+	int b_t = *(byte*)((DWORD)CPlayer+280);
+	
+	if ((a_t != 255) && (b_t != 255))
+	{
+		if (a_t != b_t)
+		{
+			// HERE MASTYYYYYYYYYYYYYYYYYYYYYY
+			// --------------------------------------
+			// AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+			// ---------------------------------------------
+			std::cout << "  PLAYER " << sPlayer_GetName(CPlayer) << " CHANGED TEAM! " << a_t << " to " << b_t << std::endl;
+		}
+	}
+	
+	return o_CRules__OnPlayerJoin(rulesptr,CPlayer);
+}
+
+void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
+{
+	if (!CPlayer) return;
+	*(byte*)((DWORD)CPlayer+292) = *(byte*)((DWORD)CPlayer+280);
+	*(byte*)((DWORD)CPlayer+280) = team;
+	o_CRules__OnPlayerJoin(rules_ptr,CPlayer);
+	//o_CPlayer__ChangeTeam((void*)team,(DWORD)CPlayer);
+}
+
+mirror(void*,CRunner__SwitchTool, DWORD runnor, unsigned char tool, bool updateClass);
+
+void sPlayer_SetClass(void* CPlayer, byte _class)
+{
+	if (!CPlayer) return;
+	DWORD runner = (DWORD)__CPlayerToCRunner(CPlayer);
+	if (!runner) return;
+	_CRunner__SwitchTool(runner, _class, true);
 }
 
 // ON PLAYER DIE
@@ -1024,11 +1165,15 @@ myfunc(int,CActor__setTeam,void* CActor,WORD team)
 
 mirror(void,CNet__server_SendGameResources,void* cnet, void* enetpeer);
 
+mirror(void*,CPlayer__ChangeTeam,void* cplayer,DWORD team);
+
 myfunc(int,CNetworkTask__Start,void* cnettask)
 {
 	nettask_ptr = cnettask;
 	return o_CNetworkTask__Start(cnettask);
 }
+
+
 
 void HookFunctions(void* handle)
 {
@@ -1057,6 +1202,7 @@ void HookFunctions(void* handle)
 	detour(CRunner__getMovementSignificance,_ZN7CRunner23getMovementSignificanceEv,6);		
 	detour(CNetworkTask__Start,_ZN12CNetworkTask5StartEv,5);
 	//detour(CPlayerManager__CastVote,_ZN14CPlayerManager8CastVoteEhtPKw,5);
+	detour(CRules__OnPlayerJoin,_ZN6CRules12OnPlayerJoinEP7CPlayer,5);
 	
 	hook(CNetworkTask__Stop,_ZN12CNetworkTask4StopEv);
 	hook(CScript__RunString,_ZN7CScript9RunStringEN3irr4core6stringIwNS1_12irrAllocatorIwEEEE);
@@ -1081,7 +1227,10 @@ void HookFunctions(void* handle)
 	hook(IC_Console__addx,_ZN10IC_Console4addxEPKcz);
 	hook(CNet__server_SendSecurityCheck,_ZN4CNet24server_SendSecurityCheckEP9_ENetPeer);
 	hook(CNet__server_SendGameResources,_ZN4CNet24server_SendGameResourcesEP9_ENetPeer);
-
+	hook(CPlayer__ChangeTeam,_ZN7CPlayer10ChangeTeamEi);
+	hook(CRunner__SwitchTool,_ZN7CRunner10SwitchToolEhb);
+	
+	
 	// sendgameresources respawns player
 	// sendrespawn only gives text on players screen without respawning at all
 
@@ -1132,7 +1281,7 @@ void HookFunctions(void* handle)
 	o_ZN6CActor4LoadEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor4LoadEv");
 	o_ZN7CPlayer10ChangeTeamEi = (void*(*)(void*, int))o_dlsym(handle, "_ZN7CPlayer10ChangeTeamEi");
 	o_ZN6CActor7setTeamEt = (void*(*)(void*, unsigned short))o_dlsym(handle, "_ZN6CActor7setTeamEt");
-	
+
 	// Initialize plugin manager
 	PluginManager::Get()->Init(CURRENT_VERSION);
 }
@@ -1989,7 +2138,7 @@ extern "C" int _ZN4CMap11recdMapTileER10CBitStreamP7CPlayer(void* CMap, void* CB
 		std::stringstream oss;
 		oss << "Using editor hack (player " << sPlayer_GetName(pSender) << ")";
 		sConsole_Print(oss.str().c_str());
-		sPlayer_Ban(pSender, -1);
+		//sPlayer_Ban(pSender, -1);
 		return 0;
 	}
 	

@@ -122,7 +122,7 @@ public:
 	unsigned int GetSeclevID() { return sPlayer_GetSeclev(this->cplayer); }
 	bool IsBot() { return sPlayer_IsBot(this->cplayer); }
 	char GetClass() { return sPlayer_GetClass(this->cplayer); }
-	char GetSex() { return 0; }
+	
 	//unsigned int GetNetworkID() { return sPlayer_GetNetworkID(this->cplayer); }
 	unsigned int GetHost() { return sPlayer_GetHost(this->cplayer); }
 	const char* GetIP() { return sPlayer_GetIP(this->cplayer); }
@@ -150,6 +150,15 @@ public:
 	void SetGold(unsigned char i) { sPlayer_SetGold(this->cplayer, i); }
 	void SetCoins(unsigned short int i) { sPlayer_SetCoins(this->cplayer, i); }
 	void SetScore(unsigned short int i) { sPlayer_SetScore(this->cplayer, i); }
+	
+	void ChangeTeam(unsigned char team) { sPlayer_ChangeTeam(this->cplayer, team); }
+	void SetClass(unsigned char tool) { sPlayer_SetClass(this->cplayer, tool); }
+	unsigned char GetSex() { return sPlayer_GetSex(this->cplayer); }
+	void SetSex(unsigned char sex) { sPlayer_SetSex(this->cplayer, sex); }
+	unsigned char GetSpecialColor() { return sPlayer_GetSpecialColor(this->cplayer); }
+	void SetSpecialColor(unsigned char color) { sPlayer_SetSpecialColor(this->cplayer,color); }
+	unsigned char GetHead() { return sPlayer_GetHead(this->cplayer); }
+	void ForceHead(unsigned char head) { sPlayer_ForceHead(this->cplayer,head); }
 	
 	void Kill() { sPlayer_Kill(this->cplayer); }
 	void Kick() { sPlayer_Kick(this->cplayer); }

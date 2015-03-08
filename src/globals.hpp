@@ -79,10 +79,20 @@ extern bool  sPlayer_CheckFeature(void* CPlayer, const char* feature);
 extern bool  sPlayer_CheckCommand(void* CPlayer, const char* command);
 extern bool  sPlayer_IsKeyDown   (void* CPlayer, unsigned char key);
 
+extern void  sPlayer_ForceHead   (void* CPlayer, byte head);
+extern byte  sPlayer_GetHead     (void* CPlayer);
+
+extern void  sPlayer_SetSex      (void* CPlayer, byte sex);
+extern byte  sPlayer_GetSex      (void* CPlayer);
+
+extern void  sPlayer_SetSpecialColor (void* CPlayer, byte color);
+extern byte  sPlayer_GetSpecialColor (void* CPlayer);
+
+extern void  sPlayer_SetClass    (void* CPlayer, byte _class);
+
 // new!
 extern DWORD sServer_GetUnits    (byte team);
 extern void  sServer_SpawnEgg    (byte type, float x, float y, WORD amount);
-
 
 extern void  sPlayer_SetClantag  (void* CPlayer, const char* name);
 extern void  sPlayer_SetPosition (void* CPlayer, float x, float y);
