@@ -385,7 +385,7 @@ int my_CPlayerManager__MakeUniqueName(int a1, String a2, int a3, int a4)
 		if mExists(forcing_heads,(void*)a3)
 		{
 			*(byte*)((unsigned int)a3 + 283) = forcing_heads[(void*)a3];
-			if (forcing_heads[(void*)a3]<5)
+			if (forcing_heads[(void*)a3]<6)
 			{
 				if (forcing_heads[(void*)a3]==2)
 					*(byte*)((unsigned int)a3 + 362) = 1;
@@ -976,6 +976,8 @@ void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
 
 mirror(void*,CRunner__SwitchTool, DWORD runnor, unsigned char tool, bool updateClass);
 
+mirror(byte,CBitStream__readuc, void* bstream);
+
 void sPlayer_SetClass(void* CPlayer, byte _class)
 {
 	if (!CPlayer) return;
@@ -1229,6 +1231,7 @@ void HookFunctions(void* handle)
 	hook(CNet__server_SendGameResources,_ZN4CNet24server_SendGameResourcesEP9_ENetPeer);
 	hook(CPlayer__ChangeTeam,_ZN7CPlayer10ChangeTeamEi);
 	hook(CRunner__SwitchTool,_ZN7CRunner10SwitchToolEhb);
+	hook(CBitStream__readuc,_ZN10CBitStream6readucEv);
 	
 	
 	// sendgameresources respawns player
@@ -2157,11 +2160,29 @@ extern "C" int _ZN4CMap11recdMapTileER10CBitStreamP7CPlayer(void* CMap, void* CB
 				unsigned char block = (unsigned char)(buffer->at(33));
 				
 				if (!PluginManager::Get()->OnMapReceiveTile(pp, x, y, block)) return 0;
+				
+				sMap_SetTile(x*8,y*8,block);
+				
+				
+				// code deleting the packet from buffer
+				
+				DWORD v7 = *(DWORD*)((DWORD)CBitStream+0xC) + 32;
+				*(DWORD*)((DWORD)CBitStream+0xC) = v7;
+				
+				if (v7 > (*(DWORD*)((DWORD)CBitStream+0x10)))
+					*(DWORD*)((DWORD)CBitStream+0x10) += 32;
+				
+				byte shit = _CBitStream__readuc(CBitStream);
+				
+				// ------ end
+				
+				return 1;
 			}
 		}
 	}
 	
-	return o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer(CMap,CBitStream,pSender);
+	return 1;
+	//return o_ZN4CMap11recdMapTileER10CBitStreamP7CPlayer(CMap,CBitStream,pSender);
 }
 
 // ---------------
