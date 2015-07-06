@@ -60,7 +60,13 @@ public:
 	std::string GetConfigFileName();
 	unsigned short GetID();
 	unsigned char GetType();
+	unsigned char GetTeam();
+	float GetX();
+	float GetY();
+	float GetHealth();
+	void SetHealth(float health);
 	std::shared_ptr<ProxyPlayer> GetPlayer();
+	void Kill();
 };
 
 //class ProxyPlayer : public ProxyBlob
@@ -131,6 +137,7 @@ public:
 	float GetY() { return sPlayer_GetPosY(this->cplayer); }
 	unsigned int GetIdleTime() { return sPlayer_GetIdleTime(this->cplayer); }
 	float GetHealth() { return sPlayer_GetHealth(this->cplayer); }
+	float GetDefaultHealth() { return sPlayer_GetDefaultHealth(this->cplayer); }
 	unsigned char GetBombs() { return sPlayer_GetBombs(this->cplayer); }
 	unsigned char GetArrows() { return sPlayer_GetArrows(this->cplayer); }
 	unsigned char GetWood() { return sPlayer_GetWood(this->cplayer); }
@@ -143,6 +150,7 @@ public:
 	void SetTeam(int t) { sPlayer_ChangeTeam(this->cplayer, t); }
 	void SetPosition(float x, float y) { sPlayer_SetPosition(this->cplayer, x, y); }
 	void SetHealth(float health) { sPlayer_SetHealth(this->cplayer, health); }
+	void SetDefaultHealth(float health) { sPlayer_SetDefaultHealth(this->cplayer, health); }
 	void SetBombs(unsigned char i) { sPlayer_SetBombs(this->cplayer, i); }
 	void SetArrows(unsigned char i) { sPlayer_SetArrows(this->cplayer, i); }
 	void SetWood(unsigned char i) { sPlayer_SetWood(this->cplayer, i); }
@@ -156,9 +164,9 @@ public:
 	unsigned char GetSex() { return sPlayer_GetSex(this->cplayer); }
 	void SetSex(unsigned char sex) { sPlayer_SetSex(this->cplayer, sex); }
 	unsigned char GetSpecialColor() { return sPlayer_GetSpecialColor(this->cplayer); }
-	void SetSpecialColor(unsigned char color) { sPlayer_SetSpecialColor(this->cplayer,color); }
+	void SetSpecialColor(unsigned char color) { sPlayer_SetSpecialColor(this->cplayer, color); }
 	unsigned char GetHead() { return sPlayer_GetHead(this->cplayer); }
-	void ForceHead(unsigned char head) { sPlayer_ForceHead(this->cplayer,head); }
+	void SetHead(unsigned char head) { sPlayer_ForceHead(this->cplayer, head); }
 	
 	void Kill() { sPlayer_Kill(this->cplayer); }
 	void Kick() { sPlayer_Kick(this->cplayer); }
@@ -178,14 +186,23 @@ public:
 	void SetString(const char* name, std::string value) { this->vars_string[name] = value; }
 	void SetTable(const char* name, LuaGlueLuaValue value) { this->vars_table[name] = value; }
 	
-	bool GetBoolean(const char* name) { return this->vars_bool[name]; }
-	double GetNumber(const char* name) { return this->vars_number[name]; }
-	std::string GetString(const char* name) { return this->vars_string[name]; }
-	LuaGlueLuaValue GetTable(const char* name) { return this->vars_table[name]; }
+	bool GetBoolean(const char* name) { auto search = this->vars_bool.find(name); return search != vars_bool.end() ? search->second : false; }
+	double GetNumber(const char* name) { auto search = this->vars_number.find(name); return search != vars_number.end() ? search->second : 0; }
+	std::string GetString(const char* name) { auto search = this->vars_string.find(name); return search != vars_string.end() ? search->second : ""; }
+	LuaGlueLuaValue GetTable(const char* name) { auto search = this->vars_table.find(name); return search != vars_table.end() ? search->second : NULL; }
 	
 	bool IsKeyDown(unsigned char k) { return sPlayer_IsKeyDown(this->cplayer, k); }
 	bool WasKeyPressed(unsigned char k) { return this->keys[k] && !this->oldkeys[k]; }
 	bool WasKeyReleased(unsigned char k) { return this->oldkeys[k] && !this->keys[k]; }
+	
+	void MountPlayer(std::shared_ptr<ProxyPlayer> p) {
+		//TODO: use __CPlayerToCRunner instead
+		void* runner = (void*)(*(unsigned int*)((unsigned int)p->cplayer+304));
+		if (runner) sPlayer_Mount(this->cplayer, runner);
+	}
+	void MountBlob(std::shared_ptr<ProxyBlob> b) { sPlayer_Mount(this->cplayer, b->cactor); }
+	void UnMountPlayer(std::shared_ptr<ProxyPlayer> p) {}
+	void UnMountBlob(std::shared_ptr<ProxyBlob> b) {}
 };
 
 ////////////////////
@@ -451,12 +468,32 @@ unsigned char ProxyBlob::GetType() {
 	//std::cout << "ProxyBlob::GetType type = " << (int)type << std::endl;
 	return type;
 }
+unsigned char ProxyBlob::GetTeam() {
+	return *(unsigned char *)((unsigned int)this->cactor + 212);
+}
+float ProxyBlob::GetX() {
+	void* pSprite = (void*)(*(unsigned int*)((unsigned int)this->cactor+536));
+	return pSprite ? (*(float*)((unsigned int)pSprite+8)) : 0.f;
+}
+float ProxyBlob::GetY() {
+	void* pSprite = (void*)(*(unsigned int*)((unsigned int)this->cactor+536));
+	return pSprite ? (*(float*)((unsigned int)pSprite+12)) : 0.f;
+}
+float ProxyBlob::GetHealth() {
+	return (*(float*)((unsigned int)this->cactor+196));
+}
+void ProxyBlob::SetHealth(float health) {
+	*(float *)((unsigned int)this->cactor+196) = health;
+}
 std::shared_ptr<ProxyPlayer> ProxyBlob::GetPlayer() {
 	//TODO: use __CRunnerToID instead
 	unsigned int PlayerPTR = *(unsigned int*)((unsigned int)this->cactor+220);
 	if (!PlayerPTR) return nullptr;
 	unsigned int PlayerID = (*(unsigned short int*)(PlayerPTR+120));
 	return PlayerManager::Get()->GetPlayerByID(PlayerID);
+}
+void ProxyBlob::Kill() {
+	sActor_Kill(this->cactor);
 }
 
 ////////////////////

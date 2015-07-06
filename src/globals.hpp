@@ -70,6 +70,9 @@ extern byte  sPlayer_GetGold            (void* CPlayer);
 extern byte  sPlayer_GetArrows          (void* CPlayer);
 extern byte  sPlayer_GetBombs           (void* CPlayer);
 extern float sPlayer_GetHealth          (void* CPlayer);
+extern float sPlayer_GetDefaultHealth   (void* CPlayer);
+
+extern void  sActor_Kill         (void* CActor);
 
 // new!
 extern void  sPlayer_ChangeTeam  (void* CPlayer, DWORD team);
@@ -97,6 +100,7 @@ extern void  sServer_SpawnEgg    (byte type, float x, float y, WORD amount);
 extern void  sPlayer_SetClantag  (void* CPlayer, const char* name);
 extern void  sPlayer_SetPosition (void* CPlayer, float x, float y);
 extern void  sPlayer_SetHealth   (void* CPlayer, float health);
+extern void  sPlayer_SetDefaultHealth   (void* CPlayer, float health);
 extern void  sPlayer_SetCoins    (void* CPlayer, WORD coins);
 extern void  sPlayer_SetTeam     (void* CPlayer, WORD team);
 extern void  sPlayer_SetStone    (void* CPlayer, byte amount);
@@ -113,7 +117,7 @@ extern void  sPlayer_Mute        (void* CPlayer, int i);
 extern void  sPlayer_Unmute      (void* CPlayer);
 extern void  sPlayer_Ban         (void* CPlayer, int MINUTES);
 extern bool  sPlayer_IsDead      (void* CPlayer);
-
+extern void  sPlayer_Mount       (void* CPlayer, void* CActor);
 extern void  sConsole_Print      (const char* str);
 // endf
 // --------------------------------------------------------

@@ -124,10 +124,10 @@ static void* (*o_ZN5CBlobD2Ev) (void*) = 0;
 static void* (*o_ZN6CActor11CreateActorEPKcS1_iS1_) (void*, const char*, const char*, int, const char*) = 0;
 static void* (*o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer) (void*, const char*, unsigned char, void*) = 0;
 static void* (*o_ZN6CActor7DestroyEv) (void*) = 0;
-static void* (*o_ZN6CActor4KillEv) (void*) = 0;
 static void* (*o_ZN6CActor4LoadEv) (void*) = 0;
 static void* (*o_ZN7CPlayer10ChangeTeamEi) (void*, int) = 0;
 static void* (*o_ZN6CActor7setTeamEt) (void*, unsigned short) = 0;
+static void* (*o_ZN6CActor4KillEv) (void*) = 0;
 static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (void*, void*&, void*) = 0;
 static void (*o_ZN4CNet18server_SendRespawnEjP9_ENetPeer) (void*, unsigned int, void*) = 0;
 static void (*o_ZN5CRoom9BuildRoomEhP7CRunner) (void*, unsigned char, void*) = 0;
@@ -465,6 +465,7 @@ std::map <unsigned int, void*> __Players;
 // standard conversion functions
 unsigned int __CRunnerToID(void* rpointer)
 {
+	if (rpointer == 0) return 0;
 	unsigned int PlayerPTR = *(unsigned int*)((unsigned int)rpointer+220);
 	return PlayerPTR ? (*(unsigned short int*)(PlayerPTR+120)) : 0;
 }
@@ -647,7 +648,6 @@ void sPlayer_SetPosition(void* CPlayer, float x, float y)
 void sPlayer_SetStone(void* CPlayer, byte amount)
 {
 	if (!CPlayer) return;
-	std::cout << CPlayer << std::endl;
 	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(byte *)((DWORD)_r + 800) = amount;
@@ -691,12 +691,27 @@ float sPlayer_GetHealth(void* CPlayer)
 	return (_r) ? *(float*)((DWORD)_r + 196) : 0;
 }
 
+float sPlayer_GetDefaultHealth(void* CPlayer)
+{
+	if (!CPlayer) return 0;
+	void* _r = __CPlayerToCRunner(CPlayer);
+	return (_r) ? *(float*)((DWORD)_r + 208) : 0;
+}
+
 void sPlayer_SetHealth(void* CPlayer, float health)
 {
 	if (!CPlayer) return;
 	void* _r = __CPlayerToCRunner(CPlayer);
 	if (!_r) return;
 	*(float *)((DWORD)_r + 196) = health;
+}
+
+void sPlayer_SetDefaultHealth(void* CPlayer, float health)
+{
+	if (!CPlayer) return;
+	void* _r = __CPlayerToCRunner(CPlayer);
+	if (!_r) return;
+	*(float *)((DWORD)_r + 208) = health;
 }
 
 byte sPlayer_GetWood(void* CPlayer)
@@ -776,7 +791,6 @@ int my_CBlob__onHit(void* dis, float x1, float y1, float x2, float y2, float dam
 	
 	//dis+48 = " 9x\bties/Rooms/Spawn_Room.cfg"
 	//dis+80 = "Entities/Rooms/Spawn_Room.cfg"
-	
 	//std::cout << "victim pointer = " << dis << std::endl;
 	unsigned int victimID = __CBlobToID(dis);
 	//std::cout << "victimID = " << victimID << std::endl;
@@ -977,7 +991,6 @@ void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
 mirror(void*,CRunner__SwitchTool, DWORD runnor, unsigned char tool, bool updateClass);
 
 mirror(byte,CBitStream__readuc, void* bstream);
-
 void sPlayer_SetClass(void* CPlayer, byte _class)
 {
 	if (!CPlayer) return;
@@ -1136,6 +1149,15 @@ void sMap_SetDayTime(float t)
 	_CMap__SetDayTime(mapptr, t);
 }
 
+mirror(void*,CRunner__Mount,void* cplayer,void* cactor);
+
+void sPlayer_Mount(void* cplayer, void* cactor)
+{
+	void* runner = __CPlayerToCRunner(cplayer);
+	if (!runner) return;
+	_CRunner__Mount(runner, cactor);
+}
+
 mirror(void*,CWorldTask__DropEgg,void* cworldtask, byte style, float x, float y, char idk, WORD amount);
 
 void sServer_SpawnEgg(byte type, float x, float y, WORD amount)
@@ -1214,6 +1236,7 @@ void HookFunctions(void* handle)
 	//hook(CPlayerManager__CastVote,_ZN14CPlayerManager8CastVoteEhtPKw);
 	hook(CMap__getDayTime,_ZN4CMap7getTimeEv);
 	hook(CMap__SetDayTime,_ZN4CMap10SetDayTimeEf);
+	hook(CRunner__Mount,_ZN7CRunner5MountEP6CActor);
 	hook(CMap__getTile,_ZN4CMap7getTileE5Vec2f);
 	hook(CMap__server_SetTile,_ZN4CMap14server_SetTileE5Vec2fh);
 	hook(CMap__setWaterLevel,_ZN4CMap13setWaterLevelEi);
@@ -1357,14 +1380,19 @@ extern "C" void _ZN7CRunner5MountEP6CActor(void* that, void* actor)
 {
 	//std::cout << "_ZN7CRunner5MountEP6CActor: " << actor << std::endl;
 	
-	char* name = (char*)(*(unsigned int*)((unsigned int)actor+80));
 	if (actor)
 	{
+		bool ret = true;
+		
+		unsigned int blobID = __CBlobToID(actor);
+		std::shared_ptr<ProxyBlob> pBlob = PlayerManager::Get()->GetBlobByID(blobID);
 		unsigned int mounterID = __CRunnerToID(that);
 		std::shared_ptr<ProxyPlayer> pMounter = PlayerManager::Get()->GetPlayerByID(mounterID);
-		bool ret = PluginManager::Get()->OnBlobMount(name, pMounter);
-		if (!ret) return;
-	
+		if (pBlob && pMounter) {
+			ret = PluginManager::Get()->OnBlobMount(pBlob, pMounter);
+			if (!ret) return;
+		}
+		
 		wchar_t* wcInventoryName = (wchar_t*)(*(unsigned int*)((unsigned int)actor+432));
 		char *inventoryname = new char[256];
 		wcstombs(inventoryname, wcInventoryName, 256);
@@ -1385,7 +1413,14 @@ extern "C" void _ZN7CRunner5MountEP6CActor(void* that, void* actor)
 
 extern "C" void _ZN7CRunner7UnMountEP6CActor(void* that, void* actor)
 {
-	//std::cout << "_ZN7CRunner7UnMountEP6CActor = " << __CRunnerToID(that) << " unmounted the flag"  << std::endl;
+	unsigned int blobID = __CBlobToID(actor);
+	std::shared_ptr<ProxyBlob> pBlob = PlayerManager::Get()->GetBlobByID(blobID);
+	unsigned int mounterID = __CRunnerToID(that);
+	std::shared_ptr<ProxyPlayer> pMounter = PlayerManager::Get()->GetPlayerByID(mounterID);
+	if (pBlob && pMounter) {
+		bool ret = PluginManager::Get()->OnBlobUnMount(pBlob, pMounter);
+		if (!ret) return;
+	}
 	o_ZN7CRunner7UnMountEP6CActor(that, actor);
 }
 
@@ -1443,11 +1478,12 @@ extern "C" void _ZN5CBlobD2Ev(void* that)
 
 extern "C" void _ZN5CBlob4LoadEv(void* that)
 {
-	//std::cout << "_ZN5CBlob4LoadEv " << that << std::endl;
+	std::cout << "_ZN5CBlob4LoadEv " << that << std::endl;
+	o_ZN5CBlob4LoadEv(that);
+	
 	auto pa = std::make_shared<ProxyBlob>(that);
 	PlayerManager::Get()->AddBlob(pa);
 	PluginManager::Get()->OnBlobInit(pa);
-	o_ZN5CBlob4LoadEv(that);
 }
 
 extern "C" void* _ZN6CActor11CreateActorEPKcS1_iS1_(void* that, const char* a, const char* b, int c, const char* d)
@@ -1475,6 +1511,11 @@ extern "C" void* _ZN9CNetFiles8SendFileEPKchP9_ENetPeer(void* that, const char* 
 
 extern "C" void _ZN6CActor7DestroyEv(void* that)
 {
+	unsigned int blobID = __CBlobToID(that);
+	std::shared_ptr<ProxyBlob> pBlob = PlayerManager::Get()->GetBlobByID(blobID);
+	if (pBlob) {
+		PluginManager::Get()->OnBlobDie(pBlob);
+	}
 	/*std::cout << "_ZN6CActor7DestroyEv " << that << std::endl;
 	unsigned int actorID = __CActorToID(that);
 	std::shared_ptr<ProxyBlob> pa = PlayerManager::Get()->GetActorByID(actorID);
@@ -1484,8 +1525,7 @@ extern "C" void _ZN6CActor7DestroyEv(void* that)
 
 extern "C" void _ZN6CActor4KillEv(void* that)
 {
-	/*std::cout << "_ZN6CActor4KillEv " << that << std::endl;
-	unsigned int actorID = __CActorToID(that);
+	/*unsigned int actorID = __CActorToID(that);
 	std::shared_ptr<ProxyBlob> pa = PlayerManager::Get()->GetActorByID(actorID);
 	if (pa) PluginManager::Get()->OnActorDie(pa);*/
 	o_ZN6CActor4KillEv(that);
@@ -1526,7 +1566,7 @@ extern "C" void _ZN14CPlayerManager8CastVoteEhtPKw(void* that, irr::u8 a, irr::u
 }
 */
 
-/*extern "C" void _ZN7CRunner9ThrowSackEiRhfi(void *that, int matType, unsigned char &sack, float dropType, int amount)
+extern "C" void* _ZN7CRunner9ThrowSackEiRhfi(void *that, int matType, unsigned char &sack, float dropType, int amount)
 {
 	//std::cout << "matType="<<matType<<" sack="<<(int)sack<<" c="<<c << " amount=" << amount << std::endl;
 	//dropType=0 drop from mining
@@ -1544,8 +1584,10 @@ extern "C" void _ZN14CPlayerManager8CastVoteEhtPKw(void* that, irr::u8 a, irr::u
 		ret = PluginManager::Get()->OnPlayerDrop(pp, amount, matType, dropType);
 	}
 	if (ret > 0) {
-		o_ZN7CRunner9ThrowSackEiRhfi(that, matType, sack, dropType, ret);
+		void* yo = o_ZN7CRunner9ThrowSackEiRhfi(that, matType, sack, dropType, ret);
+		return yo;
 	}
+	return NULL;
 	
 	/*unsigned int playerID = __CRunnerToID(that);
 	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
@@ -1568,8 +1610,8 @@ extern "C" void _ZN14CPlayerManager8CastVoteEhtPKw(void* that, irr::u8 a, irr::u
 			else if (matType == 3) sPlayer_SetGold(player, (byte)sack);
 			else std::cout<<"matType="<<matType<<std::endl;
 		}
-	}
-}*/
+	}*/
+}
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // FOR EVENT: onplayerconnect
@@ -2400,7 +2442,6 @@ void sConsole_Print(const char* str)
 	_IC_Console__addx(console_ptr, str);
 }
 
-
 static	int	socket_type (int sd) {
 	int	stype	= 0;
 	socklen_t	stlen   = sizeof(stype);
@@ -2409,10 +2450,12 @@ static	int	socket_type (int sd) {
 		result  = stype;
 	return  result;
 }
-static	int	socket_family(__CONST_SOCKADDR_ARG sock) {
+
+static int socket_family(__CONST_SOCKADDR_ARG sock) {
 	struct	sockaddr*	s	= *(struct sockaddr**)&sock;
 	return	s->sa_family;
 }
+
 int accept(int sd,  __SOCKADDR_ARG sock, socklen_t* lenp)
 {
 	fcntl(sd, F_SETFL, O_NONBLOCK); // set socket to non-blocking mode
@@ -2428,4 +2471,10 @@ int accept(int sd,  __SOCKADDR_ARG sock, socklen_t* lenp)
 	return -1;
 	*/
 	return o_accept(sd, sock, lenp);
+}
+
+void sActor_Kill(void* CActor)
+{
+	if (!CActor) return;
+	o_ZN6CActor4KillEv(CActor);
 }

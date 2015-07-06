@@ -301,7 +301,9 @@ public:
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerTick;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerHit;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnBlobHit;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnBlobDie;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnBlobMount;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnBlobUnMount;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnFlagPick;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerRespawn;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerBuild;
@@ -346,9 +348,10 @@ public:
 	void OnPlayerDie(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyPlayer>, unsigned char);
 	void OnActorDie(std::shared_ptr<ProxyBlob>);
 	float OnBlobHit(std::shared_ptr<ProxyBlob>, std::shared_ptr<ProxyActor>, float);
-	bool OnBlobMount(char*, std::shared_ptr<ProxyPlayer>);
+	void OnBlobDie(std::shared_ptr<ProxyBlob>);
+	bool OnBlobMount(std::shared_ptr<ProxyBlob>, std::shared_ptr<ProxyPlayer>);
+	bool OnBlobUnMount(std::shared_ptr<ProxyBlob>, std::shared_ptr<ProxyPlayer>);
 	bool OnFlagPick(std::shared_ptr<ProxyPlayer>, const char*);
-	//float OnPlayerHit(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyBlob>, float);
 	float OnPlayerHit(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyActor>, float);
 	void OnPlayerRespawn(std::shared_ptr<ProxyPlayer>, float, float);
 	bool OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer>, unsigned char);
@@ -494,7 +497,9 @@ void PluginManager::UnloadAll()
 	this->pluginsOnPlayerTick.clear();
 	this->pluginsOnPlayerHit.clear();
 	this->pluginsOnBlobHit.clear();
+	this->pluginsOnBlobDie.clear();
 	this->pluginsOnBlobMount.clear();
+	this->pluginsOnBlobUnMount.clear();
 	this->pluginsOnFlagPick.clear();
 	this->pluginsOnPlayerRespawn.clear();
 	this->pluginsOnPlayerBuild.clear();
@@ -565,7 +570,9 @@ void PluginManager::UnloadPlugin(std::string name)
 	/*this->pluginsOnPlayerTick.clear();
 	this->pluginsOnPlayerHit.clear();
 	this->pluginsOnBlobHit.clear();
+	this->pluginsOnBlobDie.clear();
 	this->pluginsOnBlobMount.clear();
+	this->pluginsOnBlobUnMount.clear();
 	this->pluginsOnFlagPick.clear();
 	this->pluginsOnPlayerRespawn.clear();
 	this->pluginsOnPlayerBuild.clear();
@@ -609,7 +616,9 @@ void PluginManager::LoadPlugin(std::string name)
 		if (plugin->state.globalExists("OnPlayerTick")) this->pluginsOnPlayerTick.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerHit")) this->pluginsOnPlayerHit.push_back(plugin);
 		if (plugin->state.globalExists("OnBlobHit")) this->pluginsOnBlobHit.push_back(plugin);
+		if (plugin->state.globalExists("OnBlobDie")) this->pluginsOnBlobDie.push_back(plugin);
 		if (plugin->state.globalExists("OnBlobMount")) this->pluginsOnBlobMount.push_back(plugin);
+		if (plugin->state.globalExists("OnBlobUnMount")) this->pluginsOnBlobUnMount.push_back(plugin);
 		if (plugin->state.globalExists("OnFlagPick")) this->pluginsOnFlagPick.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerRespawn")) this->pluginsOnPlayerRespawn.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerBuild")) this->pluginsOnPlayerBuild.push_back(plugin);
@@ -856,13 +865,41 @@ float PluginManager::OnBlobHit(std::shared_ptr<ProxyBlob> victim, std::shared_pt
 	return ret;
 }
 
-bool PluginManager::OnBlobMount(char* blobname, std::shared_ptr<ProxyPlayer> player)
+void PluginManager::OnBlobDie(std::shared_ptr<ProxyBlob> blob)
+{
+	for (std::shared_ptr<Plugin> p : this->pluginsOnBlobDie)
+	{
+		this->currentPlugin = p;
+		try {
+			p->state.invokeVoidFunction("OnBlobDie", blob);
+		} catch (...) {
+			PluginManager::Get()->Panic();
+		}
+	}
+}
+
+bool PluginManager::OnBlobMount(std::shared_ptr<ProxyBlob> blob, std::shared_ptr<ProxyPlayer> player)
 {
 	int ret = 0;
 	for (std::shared_ptr<Plugin> p : this->pluginsOnBlobMount)
 	{
 		this->currentPlugin = p;
-		ret = p->state.invokeFunction<int>("OnBlobMount", blobname, player);
+		ret = p->state.invokeFunction<int>("OnBlobMount", blob, player);
+		if (ret == 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool PluginManager::OnBlobUnMount(std::shared_ptr<ProxyBlob> blob, std::shared_ptr<ProxyPlayer> player)
+{
+	int ret = 0;
+	for (std::shared_ptr<Plugin> p : this->pluginsOnBlobUnMount)
+	{
+		this->currentPlugin = p;
+		ret = p->state.invokeFunction<int>("OnBlobUnMount", blob, player);
 		if (ret == 0)
 		{
 			return false;
@@ -1268,7 +1305,13 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetConfigFileName", &ProxyBlob::GetConfigFileName)
 		.method("GetID", &ProxyBlob::GetID)
 		.method("GetType", &ProxyBlob::GetType)
+		.method("GetTeam", &ProxyBlob::GetTeam)
+		.method("GetX", &ProxyBlob::GetX)
+		.method("GetY", &ProxyBlob::GetY)
+		.method("GetHealth", &ProxyBlob::GetHealth)
+		.method("SetHealth", &ProxyBlob::SetHealth)
 		.method("GetPlayer", &ProxyBlob::GetPlayer)
+		.method("Kill", &ProxyBlob::Kill)
 	.end();
 	
 	this->state.Class<ProxyPlayer>("Player")
@@ -1277,7 +1320,6 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetName", &ProxyPlayer::GetName)
 		.method("GetClantag", &ProxyPlayer::GetClantag)
 		.method("GetCharacterName", &ProxyPlayer::GetCharacterName)
-		.method("GetName", &ProxyPlayer::GetName)
 		.method("GetSeclevID", &ProxyPlayer::GetSeclevID)
 		.method("IsBot", &ProxyPlayer::IsBot)
 		.method("GetClass", &ProxyPlayer::GetClass)
@@ -1291,6 +1333,7 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetY", &ProxyPlayer::GetY)
 		.method("GetIdleTime", &ProxyPlayer::GetIdleTime)
 		.method("GetHealth", &ProxyPlayer::GetHealth)
+		.method("GetDefaultHealth", &ProxyPlayer::GetDefaultHealth)
 		.method("GetBombs", &ProxyPlayer::GetBombs)
 		.method("GetArrows", &ProxyPlayer::GetArrows)
 		.method("GetWood", &ProxyPlayer::GetWood)
@@ -1304,6 +1347,7 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("SetPosition", &ProxyPlayer::SetPosition)
 		.method("SetTeam", &ProxyPlayer::SetTeam)
 		.method("SetHealth", &ProxyPlayer::SetHealth)
+		.method("SetDefaultHealth", &ProxyPlayer::SetDefaultHealth)
 		.method("SetBombs", &ProxyPlayer::SetBombs)
 		.method("SetArrows", &ProxyPlayer::SetArrows)
 		.method("SetWood", &ProxyPlayer::SetWood)
@@ -1342,11 +1386,16 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetSpecialColor", &ProxyPlayer::GetSpecialColor)
 		.method("SetSpecialColor", &ProxyPlayer::SetSpecialColor)
 		.method("GetHead", &ProxyPlayer::GetHead)
-		.method("ForceHead", &ProxyPlayer::ForceHead)
+		.method("SetHead", &ProxyPlayer::SetHead)
 		
 		.method("IsKeyDown", &ProxyPlayer::IsKeyDown)
 		.method("WasKeyPressed", &ProxyPlayer::WasKeyPressed)
 		.method("WasKeyReleased", &ProxyPlayer::WasKeyReleased)
+		
+		.method("MountPlayer", &ProxyPlayer::MountPlayer)
+		.method("MountBlob", &ProxyPlayer::MountBlob)
+		.method("UnMountPlayer", &ProxyPlayer::UnMountPlayer)
+		.method("UnMountBlob", &ProxyPlayer::UnMountBlob)
 	.end();
 	
 	this->state.Class<ProxyKAG>("KAG")
@@ -1395,12 +1444,12 @@ Plugin::Plugin(std::string name, std::string path)
 	
 	// add current plugin path to package.path
 	std::string pluginPackagePath = std::string("package.path = \"../") + path + std::string("/?.lua;\" .. package.path");
-	std::cout << "pluginPackagePath = " << pluginPackagePath << std::endl;
+	//std::cout << "pluginPackagePath = " << pluginPackagePath << std::endl;
 	this->state.doString(pluginPackagePath.c_str());
 	
 	// add libs path
 	std::string libsPackagePath = std::string("package.path = \"../Plugins/__libs/?.lua;\" .. package.path");
-	std::cout << "libsPackagePath = " << libsPackagePath << std::endl;
+	//std::cout << "libsPackagePath = " << libsPackagePath << std::endl;
 	this->state.doString(libsPackagePath.c_str());
 	
 	// lua sandbox
@@ -1434,6 +1483,24 @@ Plugin::Plugin(std::string name, std::string path)
 					"if (filename == \"init.lua\") then\n"
 						"return nil, \"access denied\"\n"
 					"end\n"
+					"return oldOpen(filename, mode)\n"
+				"end\n"
+			"end\n"
+		);
+	} else {
+		this->state.doString(
+			"do\n"
+				"local basename = function(string_, suffix)\n"
+					"string_ = string_ or ''\n"
+					"local b = string.gsub (string_, '[^'.. \"/\" ..']*'.. \"/\" ..'', '')\n"
+					"if suffix then\n"
+						"b = string.gsub (b, suffix, '')\n"
+					"end\n"
+					"return b\n"
+				"end\n"
+				"local oldOpen = io.open\n"
+				"io.open = function (filename, mode)\n"
+					"filename = __dirname .. \"/\" .. filename\n"
 					"return oldOpen(filename, mode)\n"
 				"end\n"
 			"end\n"
