@@ -539,7 +539,6 @@ void PluginManager::ReloadAll()
 	this->LoadConfig();
 	this->LoadAll();
 	
-	PluginManager::OnServerReady();
 	for (auto &pp : PlayerManager::Get()->players)
 	{
 		PluginManager::OnPlayerInit(pp);
@@ -1443,12 +1442,12 @@ Plugin::Plugin(std::string name, std::string path)
 	this->state.doString(std::string(std::string("_G[\"__dirname\"] = \"") + PluginManager::Get()->workingDir + path + std::string("\"")).c_str());
 	
 	// add current plugin path to package.path
-	std::string pluginPackagePath = std::string("package.path = \"../") + path + std::string("/?.lua;\" .. package.path");
+	std::string pluginPackagePath = std::string("package.path = \"") + PluginManager::Get()->workingDir + path + std::string("/?.lua;\" .. package.path");
 	//std::cout << "pluginPackagePath = " << pluginPackagePath << std::endl;
 	this->state.doString(pluginPackagePath.c_str());
 	
 	// add libs path
-	std::string libsPackagePath = std::string("package.path = \"../Plugins/__libs/?.lua;\" .. package.path");
+	std::string libsPackagePath = std::string("package.path = \"") + PluginManager::Get()->workingDir + std::string("Plugins/__libs/?.lua;\" .. package.path");
 	//std::cout << "libsPackagePath = " << libsPackagePath << std::endl;
 	this->state.doString(libsPackagePath.c_str());
 	
