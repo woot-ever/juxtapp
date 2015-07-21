@@ -1141,7 +1141,7 @@ bool PluginManager::ExecuteRoomCommand(std::shared_ptr<ProxyPlayer> player, std:
 		{
 			this->currentPlugin = (*it)->plugin;
 			try {
-				(*it)->function(player);
+				(*it)->function(player, message);
 			} catch (...) {
 				PluginManager::Get()->Panic();
 			}
