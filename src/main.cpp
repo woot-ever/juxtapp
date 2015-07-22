@@ -770,7 +770,9 @@ void* my_CNetCreateServer(void* that)
 	//std::cout << std::endl << "HOOKED CNet::CreateServer(void), new function at: " << std::endl << std::endl;
 	//std::cout << std::endl << "THAT =  " << (unsigned int)that << std::endl << std::endl;
 	//raise(SIGINT);
-	return o_CNetCreateServer(that);
+	void* ret = o_CNetCreateServer(that);
+	PluginManager::Get()->OnServerReady();
+	return ret;
 }
 
 typedef int (*o_CBlob__onHit_) (void* dis, float x1, float y1, float x2, float y2, float sumtin, void* p2, int s2, int s3);
@@ -2386,8 +2388,6 @@ extern "C" void _ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump(void *that, void
 
 extern "C" void _ZN10CWorldTask5StartEv(void *that)
 {
-	PluginManager::Get()->OnServerReady();
-	
 	o_ZN10CWorldTask5StartEv(that);
 }
 

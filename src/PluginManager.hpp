@@ -45,7 +45,7 @@ class RoomCommand
 {
 public:
 	std::string command;
-	std::function<void(std::shared_ptr<ProxyPlayer>)> function;
+	std::function<void(std::shared_ptr<ProxyPlayer>, std::string)> function;
 	std::shared_ptr<Plugin> plugin;
 };
 
@@ -68,6 +68,7 @@ class ProxyPlugin
 public:
 	static const char* GetName();
 	static const char* GetPath();
+	static void Call(const char*, const char*, LuaGlueLuaValue);
 };
 
 ////////////////////
@@ -91,7 +92,7 @@ public:
 	static std::vector<std::shared_ptr<RoomCommand>> oldRoomCommands;
 	
 	static void CreateChatCommand(const char*, std::function<void(std::shared_ptr<ProxyPlayer>, std::string)>);
-	static void CreateRoomCommand(const char*, std::function<void(std::shared_ptr<ProxyPlayer>)>);
+	static void CreateRoomCommand(const char*, std::function<void(std::shared_ptr<ProxyPlayer>, std::string)>);
 	
 	/*static std::list<std::shared_ptr<ProxyPlayer>> GetPlayers()
 	{
@@ -1170,7 +1171,7 @@ void ProxyKAG::CreateChatCommand(const char* cmd, std::function<void(std::shared
 	chatCommands.push_back(chatcommand);
 }
 
-void ProxyKAG::CreateRoomCommand(const char* cmd, std::function<void(std::shared_ptr<ProxyPlayer>)> f)
+void ProxyKAG::CreateRoomCommand(const char* cmd, std::function<void(std::shared_ptr<ProxyPlayer>, std::string)> f)
 {
 	auto roomcommand = std::make_shared<RoomCommand>();
 	roomcommand->command = std::string(cmd);
@@ -1190,6 +1191,56 @@ const char* ProxyPlugin::GetName()
 const char* ProxyPlugin::GetPath()
 {
 	return std::string(PluginManager::Get()->workingDir + PluginManager::Get()->currentPlugin->path + std::string("/")).c_str();
+}
+
+void ProxyPlugin::Call(const char* pluginName, const char* functionName, LuaGlueLuaValue params)
+{
+	LuaGlueLuaTable *table = params.getTable();
+	//table->_dump();
+	
+	/*
+	table->put();
+	
+	lua_State *L = PluginManager::Get()->currentPlugin->state.state();
+	lua_pushvalue(L, -1);
+	lua_pushnil(L);
+	while (lua_next(L, -2) != 0) {
+		lua_pushvalue(L, -2);
+		printf("%s => ", lua_tostring(L, -1));
+		int t = lua_type(L, -2);
+		switch (t) {
+			case LUA_TSTRING:
+			printf("`%s'", lua_tostring(L, -2));
+			break;
+			
+			case LUA_TBOOLEAN:
+			printf(lua_toboolean(L, -2) ? "true" : "false");
+			break;
+			
+			case LUA_TNUMBER:
+			printf("%g", lua_tonumber(L, -2));
+			break;
+			
+			default:
+			printf("%s", lua_typename(L, t));
+			break;
+		}
+		printf("\n");
+		lua_pop(L, 2);
+	}
+	lua_pop(L, 1);
+	
+	lua_pop(table->_s, 1);
+	*/
+	
+	for (auto &plugin : PluginManager::Get()->plugins)
+	{
+		if (plugin->name == pluginName)
+		{
+			plugin->state.invokeVoidFunction(functionName);
+			break;
+		}
+	}
 }
 
 ////////////////////
@@ -1287,6 +1338,7 @@ Plugin::Plugin(std::string name, std::string path)
 	this->state.Class<ProxyPlugin>("Plugin")
 		.method("GetName", &ProxyPlugin::GetName)
 		.method("GetPath", &ProxyPlugin::GetPath)
+		.method("Call", &ProxyPlugin::Call)
 	.end();
 	
 	this->state.Class<ProxyJuxta>("Juxta")

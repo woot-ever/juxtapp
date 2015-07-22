@@ -34,10 +34,11 @@ class LuaGlueLuaTable
 			lua_pop(_s, 1);
 		}
 		
-	private:
 		int _ref;
 		LuaGlueBase *_b;
 		lua_State *_s;
+		
+	private:
 		
 		std::map<lua_Integer, LuaGlueLuaValue> _intidx_cache;
 		std::map<std::string, LuaGlueLuaValue> _stridx_cache;
