@@ -355,7 +355,7 @@ public:
 	bool OnFlagPick(std::shared_ptr<ProxyPlayer>, const char*);
 	float OnPlayerHit(std::shared_ptr<ProxyPlayer>, std::shared_ptr<ProxyActor>, float);
 	void OnPlayerRespawn(std::shared_ptr<ProxyPlayer>, float, float);
-	bool OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer>, unsigned char);
+	void OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer>, int, int);
 	bool OnPlayerBuild(std::shared_ptr<ProxyPlayer>, float, float, unsigned char);
 	int OnPlayerDrop(std::shared_ptr<ProxyPlayer>, int, int, float);
 	void OnMapChange(char*);
@@ -936,19 +936,17 @@ void PluginManager::OnPlayerRespawn(std::shared_ptr<ProxyPlayer> player, float x
 	}
 }
 
-bool PluginManager::OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer> player, unsigned char team)
+void PluginManager::OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer> player, int team, int oldTeam)
 {
-	int ret = 0;
 	for (std::shared_ptr<Plugin> p : this->pluginsOnPlayerChangeTeam)
 	{
 		this->currentPlugin = p;
-		ret = p->state.invokeFunction<int>("OnPlayerChangeTeam", player);
-		if (ret == 0)
-		{
-			return false;
+		try {
+			p->state.invokeFunction<int>("OnPlayerChangeTeam", player, team, oldTeam);
+		} catch (...) {
+			PluginManager::Get()->Panic();
 		}
 	}
-	return true;
 }
 
 bool PluginManager::OnPlayerBuild(std::shared_ptr<ProxyPlayer> player, float x, float y, unsigned char block)

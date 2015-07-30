@@ -87,6 +87,8 @@ void find_dlsym(){
 }
 
 static void* (*o_CRunnerBuild)(void *, Vec2f, unsigned char) = 0;
+static int (*o_ZN7CRunner9SendArrowE5Vec2fS0_h)(void*, Vec2f, Vec2f, unsigned char) = 0;
+static void* (*o_ZN7CRunner9FireArrowE5Vec2fhh)(void*, float, float, unsigned char, unsigned char) = 0;
 static int (*o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream)(void*, bool, void*, void*) = 0;
 static int (*o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer)(void*, void*, void*) = 0;
 static int (*o_ZN14CPlayerManager12RemovePlayerEP7CPlayer)(void*, void*) = 0;
@@ -126,6 +128,7 @@ static void* (*o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer) (void*, const char*, uns
 static void* (*o_ZN6CActor7DestroyEv) (void*) = 0;
 static void* (*o_ZN6CActor4LoadEv) (void*) = 0;
 static void* (*o_ZN7CPlayer10ChangeTeamEi) (void*, int) = 0;
+static void* (*o_ZN7CRunner10SwitchToolEhb) (void*, unsigned char, bool) = 0;
 static void* (*o_ZN6CActor7setTeamEt) (void*, unsigned short) = 0;
 static void* (*o_ZN6CActor4KillEv) (void*) = 0;
 static bool (*o_ZN7CRunner10recdStrikeER10CBitStreamPS_) (void*, void*&, void*) = 0;
@@ -933,11 +936,6 @@ myfunc(int,CEgg__SendCatapult,void* dis, float x1, float y1, float x2, float y2,
 	return o_CEgg__SendCatapult(dis,x1,y1,x2,y2,c1,c2);
 }
 
-// ---------------
-// ---------------
-// ONCHANGETEAM HERE
-// ---------------
-// ---------------
 void sPlayer_SetScore(void* CPlayer, WORD score)
 {
 	if (!CPlayer) return;
@@ -949,18 +947,6 @@ WORD sPlayer_GetScore(void* CPlayer)
 	return CPlayer ? *(WORD*)((*(DWORD *)((DWORD)CPlayer + 128))) : 0;
 }
 
-myfunc(int,CPlayer__ChangeTeam,void* dis, DWORD team)
-{
-	std::cout << "MYFUNC CPlayer__ChangeTeam " << std::endl;
-	unsigned int playerID = __CPlayerToID(dis);
-	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
-	if (pp)
-	{
-		PluginManager::Get()->OnPlayerChangeTeam(pp, team);
-	}
-	return o_CPlayer__ChangeTeam(dis,team);
-}
-
 myfunc(int,CRules__OnPlayerJoin,void* rulesptr, void* CPlayer)
 {
 	int a_t = *(byte*)((DWORD)CPlayer+292);
@@ -970,16 +956,19 @@ myfunc(int,CRules__OnPlayerJoin,void* rulesptr, void* CPlayer)
 	{
 		if (a_t != b_t)
 		{
-			// HERE MASTYYYYYYYYYYYYYYYYYYYYYY
-			// --------------------------------------
-			// AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-			// ---------------------------------------------
-			std::cout << "  PLAYER " << sPlayer_GetName(CPlayer) << " CHANGED TEAM! " << a_t << " to " << b_t << std::endl;
+			unsigned int playerID = __CPlayerToID(CPlayer);
+			std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
+			if (pp)
+			{
+				PluginManager::Get()->OnPlayerChangeTeam(pp, b_t, a_t);
+			}
 		}
 	}
 	
 	return o_CRules__OnPlayerJoin(rulesptr,CPlayer);
 }
+
+mirror(void*,CRunner__FireArrow, DWORD runnor, float x, float y, unsigned char angle, unsigned char power);
 
 void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
 {
@@ -987,7 +976,6 @@ void sPlayer_ChangeTeam(void* CPlayer, DWORD team)
 	*(byte*)((DWORD)CPlayer+292) = *(byte*)((DWORD)CPlayer+280);
 	*(byte*)((DWORD)CPlayer+280) = team;
 	o_CRules__OnPlayerJoin(rules_ptr,CPlayer);
-	//o_CPlayer__ChangeTeam((void*)team,(DWORD)CPlayer);
 }
 
 mirror(void*,CRunner__SwitchTool, DWORD runnor, unsigned char tool, bool updateClass);
@@ -1191,8 +1179,6 @@ myfunc(int,CActor__setTeam,void* CActor,WORD team)
 
 mirror(void,CNet__server_SendGameResources,void* cnet, void* enetpeer);
 
-mirror(void*,CPlayer__ChangeTeam,void* cplayer,DWORD team);
-
 myfunc(int,CNetworkTask__Start,void* cnettask)
 {
 	nettask_ptr = cnettask;
@@ -1210,7 +1196,6 @@ void HookFunctions(void* handle)
 	detour(CRules__StartMatch,_ZN6CRules10StartMatchEv,6);
 	detour(CRules__OnPlayerRespawn,_ZN6CRules15OnPlayerRespawnEP18CRespawnQueueActor,7);
 	detour(CRules__OnPlayerDie,_ZN6CRules11OnPlayerDieEP7CPlayerS1_h,5);
-	detour(CPlayer__ChangeTeam,_ZN7CPlayer10ChangeTeamEi,6);
 	detour(CRunner__UpdateVisuals,_ZN7CRunner13UpdateVisualsEv,5);
 	detour(CEgg__Send_Delta,_ZN4CEgg10Send_DeltaEP10CBitStreamS1_S1_,5);
 	detour(CEgg__getMovementSignificance,_ZN4CEgg23getMovementSignificanceEv,6);
@@ -1254,8 +1239,8 @@ void HookFunctions(void* handle)
 	hook(IC_Console__addx,_ZN10IC_Console4addxEPKcz);
 	hook(CNet__server_SendSecurityCheck,_ZN4CNet24server_SendSecurityCheckEP9_ENetPeer);
 	hook(CNet__server_SendGameResources,_ZN4CNet24server_SendGameResourcesEP9_ENetPeer);
-	hook(CPlayer__ChangeTeam,_ZN7CPlayer10ChangeTeamEi);
 	hook(CRunner__SwitchTool,_ZN7CRunner10SwitchToolEhb);
+	hook(CRunner__FireArrow,_ZN7CRunner9FireArrowE5Vec2fhh);
 	hook(CBitStream__readuc,_ZN10CBitStream6readucEv);
 	
 	
@@ -1264,6 +1249,8 @@ void HookFunctions(void* handle)
 
 	o_ZN4CMap7LoadMapEPKcb = (void*(*)(void* that, char* mapname))o_dlsym(handle, "_ZN4CMap7LoadMapEPKcb");
 	o_CRunnerBuild = (void*(*)(void *, Vec2f, unsigned char))o_dlsym(handle, "_ZN7CRunner5BuildE5Vec2fh");
+	o_ZN7CRunner9SendArrowE5Vec2fS0_h = (int(*)(void*, Vec2f, Vec2f, unsigned char))o_dlsym(handle, "_ZN7CRunner9SendArrowE5Vec2fS0_h");
+	o_ZN7CRunner9FireArrowE5Vec2fhh = (void*(*)(void*, float, float, unsigned char, unsigned char))o_dlsym(handle, "_ZN7CRunner9FireArrowE5Vec2fhh");
 	o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream = (int(*)(void*,bool,void*,void*))o_dlsym(handle, "_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream");
 	o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer = (int(*)(void*,void*,void*))o_dlsym(handle, "_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer");
 	o_ZN14CPlayerManager12RemovePlayerEP7CPlayer = (int(*)(void*,void*))o_dlsym(handle, "_ZN14CPlayerManager12RemovePlayerEP7CPlayer");
@@ -1308,6 +1295,7 @@ void HookFunctions(void* handle)
 	o_ZN6CActor4KillEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor4KillEv");
 	o_ZN6CActor4LoadEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor4LoadEv");
 	o_ZN7CPlayer10ChangeTeamEi = (void*(*)(void*, int))o_dlsym(handle, "_ZN7CPlayer10ChangeTeamEi");
+	o_ZN7CRunner10SwitchToolEhb = (void*(*)(void*, unsigned char, bool))o_dlsym(handle, "_ZN7CRunner10SwitchToolEhb");
 	o_ZN6CActor7setTeamEt = (void*(*)(void*, unsigned short))o_dlsym(handle, "_ZN6CActor7setTeamEt");
 
 	// Initialize plugin manager
@@ -1730,6 +1718,13 @@ extern "C" void _ZN4CNet15ServerSendToAllER10CBitStream(void* CNet, DWORD pBitSt
 							sServer_MsgToPlayer(_sender,">> You do not have access to that command!");
 						}
 					}
+					else if (_msg.substr(0,6)=="/arrow")
+					{
+						std::cout << "BOOM!" << std::endl;
+						DWORD runner = (DWORD)__CPlayerToCRunner(_sender);
+						_CRunner__FireArrow(runner, sPlayer_GetPosX(_sender), sPlayer_GetPosY(_sender), 114, 33);
+						std::cout << "BOOM DONE!" << std::endl;
+					}
 					else if (_msg.substr(0,8)=="/plugins")
 					{
 						do_send = false;
@@ -1971,6 +1966,24 @@ extern "C" void _ZN7CRunner5BuildE5Vec2fh(void *that, struct Vec2f pos, unsigned
 		if (!PluginManager::Get()->OnPlayerBuild(pp, pos.x, pos.y, block)) return;
 	}
 	o_CRunnerBuild(that, pos, block); 
+}
+
+extern "C" int _ZN7CRunner9SendArrowE5Vec2fS0_h(void *that, Vec2f a, Vec2f b, unsigned char c)
+{
+	std::cout << "_ZN7CRunner9SendArrowE5Vec2fS0_h" << std::endl;
+	std::cout << "a = " << a.x << ":" << a.y << std::endl;
+	std::cout << "b = " << b.x << ":" << b.y << std::endl;
+	std::cout << "c = " << (int)c << std::endl;
+	return o_ZN7CRunner9SendArrowE5Vec2fS0_h(that, a, b, c);
+}
+
+extern "C" void _ZN7CRunner9FireArrowE5Vec2fhh(void* that, float a1, float a2, unsigned char b, unsigned char c)
+{
+	std::cout << "_ZN7CRunner9FireArrowE5Vec2fhh" << std::endl;
+	std::cout << "a = " << a1 << ":" << a2 << std::endl;
+	std::cout << "b = " << (int)b << std::endl;
+	std::cout << "c = " << (int)c << std::endl;
+	o_ZN7CRunner9FireArrowE5Vec2fhh(that, a1, a2, b, c);
 }
 
 // ----------------
@@ -2389,6 +2402,13 @@ extern "C" void _ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump(void *that, void
 extern "C" void _ZN10CWorldTask5StartEv(void *that)
 {
 	o_ZN10CWorldTask5StartEv(that);
+}
+
+extern "C" void _ZN7CRunner10SwitchToolEhb(void* that, unsigned char tool, bool updateClass)
+{
+	std::cout << "tool = " << (int)tool << std::endl;
+	std::cout << "updateClass = " << updateClass << std::endl;
+	o_ZN7CRunner10SwitchToolEhb(that, tool, updateClass);
 }
 
 /*
