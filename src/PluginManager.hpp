@@ -942,7 +942,7 @@ void PluginManager::OnPlayerChangeTeam(std::shared_ptr<ProxyPlayer> player, int 
 	{
 		this->currentPlugin = p;
 		try {
-			p->state.invokeFunction<int>("OnPlayerChangeTeam", player, team, oldTeam);
+			p->state.invokeVoidFunction("OnPlayerChangeTeam", player, team, oldTeam);
 		} catch (...) {
 			PluginManager::Get()->Panic();
 		}
