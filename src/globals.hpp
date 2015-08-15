@@ -45,7 +45,7 @@ extern void  sServer_Msg         (const char* msg);
 extern void  sServer_Command     (const char* cmd);
 extern void  sServer_Script      (const char* script);
 extern void  sServer_AddBot      (unsigned int team, unsigned int cls, const char* name);
-extern void  sServer_AddBlob     (const char* blobtype, const char* filepath, float x , float y, unsigned int team);
+extern DWORD sServer_AddBlob     (const char* blobtype, const char* filepath, float x , float y, unsigned int team);
 extern void  sServer_RestartMatch();
 
 extern DWORD sPlayer_GetID              (void* CPlayer);
@@ -75,28 +75,32 @@ extern float sPlayer_GetDefaultHealth   (void* CPlayer);
 extern void  sActor_Kill         (void* CActor);
 
 // new!
-extern void  sPlayer_ChangeTeam  (void* CPlayer, DWORD team);
-extern void  sPlayer_SetScore    (void* CPlayer, WORD score);
-extern WORD  sPlayer_GetScore    (void* CPlayer);
-extern bool  sPlayer_CheckFeature(void* CPlayer, const char* feature);
-extern bool  sPlayer_CheckCommand(void* CPlayer, const char* command);
-extern bool  sPlayer_IsKeyDown   (void* CPlayer, unsigned char key);
+extern void  sPlayer_ChangeTeam      (void* CPlayer, DWORD team);
+extern void  sPlayer_SetScore        (void* CPlayer, WORD score);
+extern WORD  sPlayer_GetScore        (void* CPlayer);
+extern bool  sPlayer_CheckFeature    (void* CPlayer, const char* feature);
+extern bool  sPlayer_CheckCommand    (void* CPlayer, const char* command);
+extern bool  sPlayer_IsKeyDown       (void* CPlayer, unsigned char key);
+extern bool  sPlayer_IsCrouching     (void* CPlayer);
+extern bool  sPlayer_IsJumping       (void* CPlayer);
+extern bool  sPlayer_IsShieldingUp   (void* CPlayer);
+extern bool  sPlayer_IsShieldingDown (void* CPlayer);
+extern bool  sPlayer_IsShieldingSide (void* CPlayer);
+extern void  sPlayer_ForceHead       (void* CPlayer, byte head);
+extern byte  sPlayer_GetHead         (void* CPlayer);
 
-extern void  sPlayer_ForceHead   (void* CPlayer, byte head);
-extern byte  sPlayer_GetHead     (void* CPlayer);
-
-extern void  sPlayer_SetSex      (void* CPlayer, byte sex);
-extern byte  sPlayer_GetSex      (void* CPlayer);
+extern void  sPlayer_SetSex (void* CPlayer, byte sex);
+extern byte  sPlayer_GetSex (void* CPlayer);
 
 extern void  sPlayer_SetSpecialColor (void* CPlayer, byte color);
 extern byte  sPlayer_GetSpecialColor (void* CPlayer);
 
 extern void  sPlayer_SetClass    (void* CPlayer, byte _class);
-
+extern void  sPlayer_ShootArrow  (void* CPlayer, float x, float y, unsigned char angle, unsigned char power, bool RealDamage);
 // new!
 extern DWORD sServer_GetUnits    (byte team);
 extern void  sServer_SpawnEgg    (byte type, float x, float y, WORD amount);
-
+extern void  sServer_SpawnBomb   (float x, float y, float vx, float vy, WORD timer, WORD team);
 extern void  sPlayer_SetClantag  (void* CPlayer, const char* name);
 extern void  sPlayer_SetPosition (void* CPlayer, float x, float y);
 extern void  sPlayer_SetHealth   (void* CPlayer, float health);

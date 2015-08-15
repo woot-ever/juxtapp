@@ -177,6 +177,13 @@ public:
 	void Ban(int i) { sPlayer_Ban(this->cplayer, i); }
 	void SendMessage(const char* msg) { sServer_MsgToPlayer(this->cplayer, msg); }
 	bool IsPlaying() { return this->playing; }
+	bool IsDead() { return sPlayer_IsDead(this->cplayer); }
+	bool IsCrouching() { return sPlayer_IsCrouching(this->cplayer); }
+	bool IsJumping() { return sPlayer_IsJumping(this->cplayer); }
+	bool IsShielding() { return sPlayer_IsShieldingUp(this->cplayer) || sPlayer_IsShieldingSide(this->cplayer) || sPlayer_IsShieldingDown(this->cplayer); }
+	bool IsShieldingUp() { return sPlayer_IsShieldingUp(this->cplayer); }
+	bool IsShieldingDown() { return sPlayer_IsShieldingDown(this->cplayer); }
+	bool IsShieldingSide() { return sPlayer_IsShieldingSide(this->cplayer); }
 	
 	bool HasFeature(const char* feature) { return sPlayer_CheckFeature(this->cplayer, feature); }
 	bool HasCommand(const char* command) { return sPlayer_CheckCommand(this->cplayer, command); }
@@ -194,6 +201,7 @@ public:
 	bool IsKeyDown(unsigned char k) { return sPlayer_IsKeyDown(this->cplayer, k); }
 	bool WasKeyPressed(unsigned char k) { return this->keys[k] && !this->oldkeys[k]; }
 	bool WasKeyReleased(unsigned char k) { return this->oldkeys[k] && !this->keys[k]; }
+	void ShootArrow(float x, float y, unsigned char angle, unsigned char power, bool fake) { sPlayer_ShootArrow(this->cplayer, x, y, angle, power, fake); }
 	
 	void MountPlayer(std::shared_ptr<ProxyPlayer> p) {
 		//TODO: use __CPlayerToCRunner instead

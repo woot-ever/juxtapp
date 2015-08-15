@@ -231,14 +231,22 @@ public:
 		sServer_SpawnEgg(type, x, y, amount);
 	}
 	
+	static void SpawnBomb(float x, float y, float vx, float vy, unsigned short int timer, unsigned short int team)
+	{
+		sServer_SpawnBomb(x,y,vx,vy,timer,team);
+	}
+	
 	static void SpawnBot(unsigned int team, unsigned int cls, const char* name)
 	{
 		sServer_AddBot(team, cls, name);
 	}
 	
-	static void SpawnBlob(const char* blobtype, const char* filepath, float x , float y, unsigned int team)
+	static std::shared_ptr<ProxyBlob> SpawnBlob(const char* blobtype, const char* filepath, float x , float y, unsigned int team)
 	{
-		sServer_AddBlob(blobtype, filepath, x, y, team);
+		unsigned int tempy = sServer_AddBlob(blobtype, filepath, x, y, team);
+		if (!tempy) return NULL;
+		unsigned short networkid = (unsigned short)(*(unsigned int*)((unsigned int)tempy+184));
+		return PlayerManager::Get()->GetBlobByID(networkid);
 	}
 	
 	static void SendMessage(const char* msg)
@@ -323,6 +331,7 @@ public:
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapReceiveTile;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapCollapseTile;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnUnload;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnPlayerShotArrow;
 	
 	PluginManager();
 	~PluginManager();
@@ -361,6 +370,7 @@ public:
 	void OnMapChange(char*);
 	bool OnMapReceiveTile(std::shared_ptr<ProxyPlayer>, float, float, unsigned char);
 	bool OnMapCollapseTile(float, float, unsigned char);
+	bool OnPlayerShotArrow(std::shared_ptr<ProxyPlayer>, float, float, unsigned char, unsigned char);
 	void OnMatchWarmup();
 	void OnMatchStart();
 	void OnMatchEnd();
@@ -517,6 +527,7 @@ void PluginManager::UnloadAll()
 	this->pluginsOnMapChange.clear();
 	this->pluginsOnMapReceiveTile.clear();
 	this->pluginsOnMapCollapseTile.clear();
+	this->pluginsOnPlayerShotArrow.clear();
 	this->pluginsOnUnload.clear();
 	this->plugins.clear();
 	
@@ -588,6 +599,7 @@ void PluginManager::UnloadPlugin(std::string name)
 	this->pluginsOnMapChange.clear();
 	this->pluginsOnMapReceiveTile.clear();
 	this->pluginsOnMapCollapseTile.clear();
+	this->pluginsOnPlayerShotArrow.clear();
 	this->plugins.clear();*/
 }
 
@@ -615,6 +627,7 @@ void PluginManager::LoadPlugin(std::string name)
 		if (plugin->state.globalExists("OnActorDie")) this->pluginsOnActorDie.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerTick")) this->pluginsOnPlayerTick.push_back(plugin);
 		if (plugin->state.globalExists("OnPlayerHit")) this->pluginsOnPlayerHit.push_back(plugin);
+		if (plugin->state.globalExists("OnPlayerShotArrow")) this->pluginsOnPlayerShotArrow.push_back(plugin);
 		if (plugin->state.globalExists("OnBlobHit")) this->pluginsOnBlobHit.push_back(plugin);
 		if (plugin->state.globalExists("OnBlobDie")) this->pluginsOnBlobDie.push_back(plugin);
 		if (plugin->state.globalExists("OnBlobMount")) this->pluginsOnBlobMount.push_back(plugin);
@@ -730,6 +743,21 @@ bool PluginManager::OnPlayerAttack(std::shared_ptr<ProxyPlayer> player)
 	{
 		this->currentPlugin = p;
 		ret = p->state.invokeFunction<int>("OnPlayerAttack", player);
+		if (ret == 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool PluginManager::OnPlayerShotArrow(std::shared_ptr<ProxyPlayer> player, float x, float y, unsigned char angle, unsigned char power)
+{
+	int ret = 0;
+	for (std::shared_ptr<Plugin> p : this->pluginsOnPlayerShotArrow)
+	{
+		this->currentPlugin = p;
+		ret = p->state.invokeFunction<int>("OnPlayerShotArrow", player, x, y, angle, power);
 		if (ret == 0)
 		{
 			return false;
@@ -1414,6 +1442,13 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("Ban", &ProxyPlayer::Ban)
 		.method("SendMessage", &ProxyPlayer::SendMessage)
 		.method("IsPlaying", &ProxyPlayer::IsPlaying)
+		.method("IsDead", &ProxyPlayer::IsDead)
+		.method("IsCrouching", &ProxyPlayer::IsCrouching)
+		.method("IsJumping", &ProxyPlayer::IsJumping)
+		.method("IsShielding", &ProxyPlayer::IsShielding)
+		.method("IsShieldingUp", &ProxyPlayer::IsShieldingUp)
+		.method("IsShieldingSide", &ProxyPlayer::IsShieldingSide)
+		.method("IsShieldingDown", &ProxyPlayer::IsShieldingDown)
 		
 		.method("HasFeature", &ProxyPlayer::HasFeature)
 		.method("HasCommand", &ProxyPlayer::HasCommand)
@@ -1440,6 +1475,7 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("IsKeyDown", &ProxyPlayer::IsKeyDown)
 		.method("WasKeyPressed", &ProxyPlayer::WasKeyPressed)
 		.method("WasKeyReleased", &ProxyPlayer::WasKeyReleased)
+		.method("ShootArrow", &ProxyPlayer::ShootArrow)
 		
 		.method("MountPlayer", &ProxyPlayer::MountPlayer)
 		.method("MountBlob", &ProxyPlayer::MountBlob)
@@ -1476,6 +1512,7 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetUnitsLeft", &ProxyKAG::GetUnitsLeft)
 		.method("IsWarmup", &ProxyKAG::IsWarmup)
 		.method("SpawnEgg", &ProxyKAG::SpawnEgg)
+		.method("SpawnBomb", &ProxyKAG::SpawnBomb)
 		.method("SpawnBot", &ProxyKAG::SpawnBot)
 		.method("SpawnBlob", &ProxyKAG::SpawnBlob)
 		.method("SendMessage", &ProxyKAG::SendMessage)

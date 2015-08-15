@@ -59,7 +59,7 @@ struct APIPlayer {
 #include <sys/stat.h> // for mkdir
 #include <sys/types.h> // for mkdir
 
-const int CURRENT_VERSION = 4;
+const int CURRENT_VERSION = 5;
 
 bool currdirinbase = false;
 
@@ -87,8 +87,7 @@ void find_dlsym(){
 }
 
 static void* (*o_CRunnerBuild)(void *, Vec2f, unsigned char) = 0;
-static int (*o_ZN7CRunner9SendArrowE5Vec2fS0_h)(void*, Vec2f, Vec2f, unsigned char) = 0;
-static void* (*o_ZN7CRunner9FireArrowE5Vec2fhh)(void*, float, float, unsigned char, unsigned char) = 0;
+static bool (*o_ZN7CRunner9FireArrowE5Vec2fhh)(void*, float, float, unsigned char, unsigned char) = 0;
 static int (*o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream)(void*, bool, void*, void*) = 0;
 static int (*o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer)(void*, void*, void*) = 0;
 static int (*o_ZN14CPlayerManager12RemovePlayerEP7CPlayer)(void*, void*) = 0;
@@ -123,7 +122,7 @@ static void* (*o_ZN5CBlob4LoadEv) (void*) = 0;
 static void* (*o_ZN5CBlobD0Ev) (void*) = 0;
 static void* (*o_ZN5CBlobD1Ev) (void*) = 0;
 static void* (*o_ZN5CBlobD2Ev) (void*) = 0;
-static void* (*o_ZN6CActor11CreateActorEPKcS1_iS1_) (void*, const char*, const char*, int, const char*) = 0;
+static void* (*o_ZN6CActor11CreateActorEPKcS1_iS1_) (const char*, const char*, int, const char*) = 0;
 static void* (*o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer) (void*, const char*, unsigned char, void*) = 0;
 static void* (*o_ZN6CActor7DestroyEv) (void*) = 0;
 static void* (*o_ZN6CActor4LoadEv) (void*) = 0;
@@ -1107,6 +1106,42 @@ bool sPlayer_IsKeyDown(void* player, unsigned char key)
 	return k == 1;
 }
 
+bool sPlayer_IsCrouching(void* player)
+{
+	void* runner = __CPlayerToCRunner(player);
+	if (!runner) return false;
+	return *(byte*)((DWORD)runner+712) == 1;
+}
+
+bool sPlayer_IsJumping(void* player)
+{
+	void* runner = __CPlayerToCRunner(player);
+	if (!runner) return false;
+	int jc = *(int*)((DWORD)runner+688);
+	return jc > 0;
+}
+
+bool sPlayer_IsShieldingUp(void* player)
+{
+	void* runner = __CPlayerToCRunner(player);
+	if (!runner) return false;
+	return *(byte*)((DWORD)runner+713) == 1;
+}
+
+bool sPlayer_IsShieldingDown(void* player)
+{
+	void* runner = __CPlayerToCRunner(player);
+	if (!runner) return false;
+	return *(byte*)((DWORD)runner+715) == 1;
+}
+
+bool sPlayer_IsShieldingSide(void* player)
+{
+	void* runner = __CPlayerToCRunner(player);
+	if (!runner) return false;
+	return *(byte*)((DWORD)runner+714) == 1;
+}
+
 bool sPlayer_CheckFeature(void* CPlayer, const char* feature)
 {
 	if (!CPlayer) return false;
@@ -1149,6 +1184,7 @@ void sPlayer_Mount(void* cplayer, void* cactor)
 }
 
 mirror(void*,CWorldTask__DropEgg,void* cworldtask, byte style, float x, float y, char idk, WORD amount);
+mirror(void,CBlob__setPosition,void* cblob,float x, float y);
 
 void sServer_SpawnEgg(byte type, float x, float y, WORD amount)
 {
@@ -1185,7 +1221,48 @@ myfunc(int,CNetworkTask__Start,void* cnettask)
 	return o_CNetworkTask__Start(cnettask);
 }
 
+mirror(void, CBitStream__newCBitStream, void* CBitStream);
+mirror(void, CBitStream__write_ushort, void* CBitStream, unsigned short Value);
+mirror(void, CBitStream__writeuc, void* CBitStream, unsigned char Value);
+mirror(void, CBitStream__delCBitStream, void* CBitStream);
+mirror(void, CNet__ServerPumpOnceToAll, void* CNet, void* CBitStream, unsigned char packet_type);
+mirror(void, CNet__client_recdProjectile, void* CNet, void* CBitSteam);
 
+void sPlayer_ShootArrow(void* CPlayer, float x, float y, unsigned char angle, unsigned char power, bool RealDamage)
+{
+	DWORD netid = 0;
+	if (CPlayer)
+	{
+		netid = sPlayer_GetNetworkID(CPlayer);
+		if (netid==0) return;
+	}
+	else netid = 0;
+	
+	void* bitstream = malloc(0x20);
+	_CBitStream__newCBitStream(bitstream);
+	
+	_CBitStream__write_ushort(bitstream, netid);
+	_CBitStream__write_ushort(bitstream, (short)x);
+	_CBitStream__write_ushort(bitstream, (short)y);
+	
+	_CBitStream__writeuc(bitstream, angle);
+	_CBitStream__writeuc(bitstream, power);
+	_CBitStream__writeuc(bitstream, 33);
+	
+	if (net_ptr) 
+	{
+		_CNet__ServerPumpOnceToAll(net_ptr, bitstream, 0x3D);
+		if (RealDamage)
+		{
+			*(DWORD*)((DWORD)bitstream+0xC) = 0;
+			_CNet__client_recdProjectile(net_ptr, bitstream);
+		}
+	}
+	
+	_CBitStream__delCBitStream(bitstream);
+	free(bitstream);
+	
+}
 
 void HookFunctions(void* handle)
 {
@@ -1242,15 +1319,14 @@ void HookFunctions(void* handle)
 	hook(CRunner__SwitchTool,_ZN7CRunner10SwitchToolEhb);
 	hook(CRunner__FireArrow,_ZN7CRunner9FireArrowE5Vec2fhh);
 	hook(CBitStream__readuc,_ZN10CBitStream6readucEv);
-	
+	hook(CBlob__setPosition,_ZN5CBlob11setPositionE5Vec2f);
 	
 	// sendgameresources respawns player
 	// sendrespawn only gives text on players screen without respawning at all
 
 	o_ZN4CMap7LoadMapEPKcb = (void*(*)(void* that, char* mapname))o_dlsym(handle, "_ZN4CMap7LoadMapEPKcb");
 	o_CRunnerBuild = (void*(*)(void *, Vec2f, unsigned char))o_dlsym(handle, "_ZN7CRunner5BuildE5Vec2fh");
-	o_ZN7CRunner9SendArrowE5Vec2fS0_h = (int(*)(void*, Vec2f, Vec2f, unsigned char))o_dlsym(handle, "_ZN7CRunner9SendArrowE5Vec2fS0_h");
-	o_ZN7CRunner9FireArrowE5Vec2fhh = (void*(*)(void*, float, float, unsigned char, unsigned char))o_dlsym(handle, "_ZN7CRunner9FireArrowE5Vec2fhh");
+	o_ZN7CRunner9FireArrowE5Vec2fhh = (bool(*)(void*, float, float, unsigned char, unsigned char))o_dlsym(handle, "_ZN7CRunner9FireArrowE5Vec2fhh");
 	o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream = (int(*)(void*,bool,void*,void*))o_dlsym(handle, "_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream");
 	o_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer = (int(*)(void*,void*,void*))o_dlsym(handle, "_ZN14CPlayerManager9AddPlayerEP9_ENetPeerP7CPlayer");
 	o_ZN14CPlayerManager12RemovePlayerEP7CPlayer = (int(*)(void*,void*))o_dlsym(handle, "_ZN14CPlayerManager12RemovePlayerEP7CPlayer");
@@ -1289,7 +1365,7 @@ void HookFunctions(void* handle)
 	o_ZN5CBlobD0Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD0Ev");
 	o_ZN5CBlobD1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD1Ev");
 	o_ZN5CBlobD2Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD2Ev");
-	o_ZN6CActor11CreateActorEPKcS1_iS1_ = (void*(*)(void*, const char*, const char*, int, const char*))o_dlsym(handle, "_ZN6CActor11CreateActorEPKcS1_iS1_");
+	o_ZN6CActor11CreateActorEPKcS1_iS1_ = (void*(*)(const char*, const char*, int, const char*))o_dlsym(handle, "_ZN6CActor11CreateActorEPKcS1_iS1_");
 	o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer = (void*(*)(void*, const char*, unsigned char, void*))o_dlsym(handle, "_ZN9CNetFiles8SendFileEPKchP9_ENetPeer");
 	o_ZN6CActor7DestroyEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor7DestroyEv");
 	o_ZN6CActor4KillEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor4KillEv");
@@ -1476,19 +1552,9 @@ extern "C" void _ZN5CBlob4LoadEv(void* that)
 	PluginManager::Get()->OnBlobInit(pa);
 }
 
-extern "C" void* _ZN6CActor11CreateActorEPKcS1_iS1_(void* that, const char* a, const char* b, int c, const char* d)
+extern "C" void* _ZN6CActor11CreateActorEPKcS1_iS1_(const char* a, const char* b, int c, const char* d)
 {
-	/*std::cout << "_ZN6CActor11CreateActorEPKcS1_iS1_ " << that << std::endl;
-	if (a) std::cout << a << std::endl;
-	if (c) std::cout << c << std::endl;
-	if (d) std::cout << d << std::endl;
-	void* pActor  = o_ZN6CActor11CreateActorEPKcS1_iS1_(that, a, b, c, d);
-	std::cout << "pActor = " << pActor << std::endl;
-	auto pa = std::make_shared<ProxyBlob>(pActor);
-	PlayerManager::Get()->AddActor(pa);
-	PluginManager::Get()->OnActorInit(pa);
-	return pActor;*/
-	return o_ZN6CActor11CreateActorEPKcS1_iS1_(that, a, b, c, d);
+	return o_ZN6CActor11CreateActorEPKcS1_iS1_(a, b, c, d);
 }
 
 extern "C" void* _ZN9CNetFiles8SendFileEPKchP9_ENetPeer(void* that, const char* a, unsigned char b, void* c)
@@ -1930,11 +1996,15 @@ void sServer_AddBot(unsigned int team, unsigned int cls, const char* name)
 	sServer_Script(oss.str().c_str());
 }
 
-void sServer_AddBlob(const char* blobtype, const char* filepath, float x , float y, unsigned int team)
+DWORD sServer_AddBlob(const char* blobtype, const char* filepath, float x , float y, unsigned int team)
 {
-	std::stringstream oss;
-	oss << "addBlob(`" << blobtype << "`, `" << filepath << "`, " << x << ", " << y << ", " << team << ");";
-	sServer_Script(oss.str().c_str());
+	DWORD new_blob = (DWORD)o_ZN6CActor11CreateActorEPKcS1_iS1_(blobtype, filepath, -1, "");
+	if ( !new_blob )
+		return 0;
+	_ZN5CBlob4LoadEv((void*)new_blob);
+	_CBlob__setPosition((void*)new_blob,x,y);
+	*(byte*)(new_blob+0xD4) = team;
+	return new_blob;
 }
 
 void sMap_NextMap()
@@ -1968,22 +2038,14 @@ extern "C" void _ZN7CRunner5BuildE5Vec2fh(void *that, struct Vec2f pos, unsigned
 	o_CRunnerBuild(that, pos, block); 
 }
 
-extern "C" int _ZN7CRunner9SendArrowE5Vec2fS0_h(void *that, Vec2f a, Vec2f b, unsigned char c)
+extern "C" bool _ZN7CRunner9FireArrowE5Vec2fhh(void* that, float a1, float a2, unsigned char b, unsigned char c)
 {
-	std::cout << "_ZN7CRunner9SendArrowE5Vec2fS0_h" << std::endl;
-	std::cout << "a = " << a.x << ":" << a.y << std::endl;
-	std::cout << "b = " << b.x << ":" << b.y << std::endl;
-	std::cout << "c = " << (int)c << std::endl;
-	return o_ZN7CRunner9SendArrowE5Vec2fS0_h(that, a, b, c);
-}
-
-extern "C" void _ZN7CRunner9FireArrowE5Vec2fhh(void* that, float a1, float a2, unsigned char b, unsigned char c)
-{
-	std::cout << "_ZN7CRunner9FireArrowE5Vec2fhh" << std::endl;
-	std::cout << "a = " << a1 << ":" << a2 << std::endl;
-	std::cout << "b = " << (int)b << std::endl;
-	std::cout << "c = " << (int)c << std::endl;
-	o_ZN7CRunner9FireArrowE5Vec2fhh(that, a1, a2, b, c);
+	unsigned int playerID = __CPlayerToID(that);
+	std::shared_ptr<ProxyPlayer> pp = PlayerManager::Get()->GetPlayerByID(playerID);
+	if (pp) {
+		if (!PluginManager::Get()->OnPlayerShotArrow(pp, a1, a2, b, c)) return false;
+	}
+	return o_ZN7CRunner9FireArrowE5Vec2fhh(that, a1, a2, b, c);
 }
 
 // ----------------
@@ -2028,8 +2090,10 @@ void sPlayer_Kill(void* CPlayer)
 	if (!CPlayer) return;
 	void* temp = __CPlayerToCRunner(CPlayer);
 	if (!net_ptr) return;
-	if (temp) _CRunner__Kill(temp);
-	_CNet__server_SendGameResources(net_ptr,__CPlayerToENetPeer(CPlayer));
+	if (temp) {
+		_CRunner__Kill(temp);
+		_CNet__server_SendGameResources(net_ptr,__CPlayerToENetPeer(CPlayer));
+	}
 }
 
 bool sPlayer_IsDead(void* CPlayer)
