@@ -53,6 +53,8 @@ extern DWORD sPlayer_GetSeclev          (void* CPlayer);
 extern bool  sPlayer_IsBot              (void* CPlayer);
 extern float sPlayer_GetPosX            (void* CPlayer);
 extern float sPlayer_GetPosY            (void* CPlayer);
+extern float sPlayer_GetMouseX          (void* CPlayer);
+extern float sPlayer_GetMouseY          (void* CPlayer);
 extern unsigned int sPlayer_GetIdleTime (void* CPlayer);
 extern char  sPlayer_GetClass           (void* CPlayer);
 extern void* sPlayer_GetRunner          (void* CPlayer);

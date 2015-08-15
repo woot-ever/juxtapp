@@ -135,6 +135,8 @@ public:
 	unsigned char GetTeam() { return sPlayer_GetTeam(this->cplayer); }
 	float GetX() { return sPlayer_GetPosX(this->cplayer); }
 	float GetY() { return sPlayer_GetPosY(this->cplayer); }
+	float GetMouseX() { return sPlayer_GetMouseX(this->cplayer); }
+	float GetMouseY() { return sPlayer_GetMouseY(this->cplayer); }
 	unsigned int GetIdleTime() { return sPlayer_GetIdleTime(this->cplayer); }
 	float GetHealth() { return sPlayer_GetHealth(this->cplayer); }
 	float GetDefaultHealth() { return sPlayer_GetDefaultHealth(this->cplayer); }

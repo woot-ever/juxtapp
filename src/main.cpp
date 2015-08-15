@@ -2124,6 +2124,20 @@ float sPlayer_GetPosY(void* CPlayer)
 	return pBody ? (*(Vec2f*)((unsigned int)pBody+620)).y : 0.f;
 }
 
+float sPlayer_GetMouseX(void* CPlayer)
+{
+	if (!CPlayer) return 0;
+	void* _r = __CPlayerToCRunner(CPlayer);
+	return (_r) ? *(float*)((DWORD)_r + 696) : 0;
+}
+
+float sPlayer_GetMouseY(void* CPlayer)
+{
+	if (!CPlayer) return 0;
+	void* _r = __CPlayerToCRunner(CPlayer);
+	return (_r) ? *(float*)((DWORD)_r + 700) : 0;
+}
+
 char sPlayer_GetClass(void* CPlayer)
 {
 	if (!CPlayer) return 0.f;
