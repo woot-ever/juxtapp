@@ -636,8 +636,20 @@ void sPlayer_SetPosition(void* CPlayer, float x, float y)
 	{
 		TPs[tBody].x = x;
 		TPs[tBody].y = y;
-		TPs[tBody].vx = 0; 
-		TPs[tBody].vy = 0; 
+		TPs[tBody].vx = 0;
+		TPs[tBody].vy = 0;
+	}
+}
+
+void sPlayer_SetVelocity(void* CPlayer, float vx, float vy)
+{
+	void* tBody = __CPlayerToCRunner(CPlayer);
+	if (tBody)
+	{
+		TPs[tBody].x = sPlayer_GetPosX(CPlayer);
+		TPs[tBody].y = sPlayer_GetPosY(CPlayer);
+		TPs[tBody].vx = vx;
+		TPs[tBody].vy = vy;
 	}
 }
 
@@ -2122,6 +2134,20 @@ float sPlayer_GetPosY(void* CPlayer)
 	if (!CPlayer) return 0.f;
 	void* pBody = __CPlayerToCRunner(CPlayer);
 	return pBody ? (*(Vec2f*)((unsigned int)pBody+620)).y : 0.f;
+}
+
+float sPlayer_GetVelX(void* CPlayer)
+{
+	if (!CPlayer) return 0.f;
+	void* pBody = __CPlayerToCRunner(CPlayer);
+	return pBody ? (*(Vec2f*)((unsigned int)pBody+644)).x : 0.f;
+}
+
+float sPlayer_GetVelY(void* CPlayer)
+{
+	if (!CPlayer) return 0.f;
+	void* pBody = __CPlayerToCRunner(CPlayer);
+	return pBody ? (*(Vec2f*)((unsigned int)pBody+644)).y : 0.f;
 }
 
 float sPlayer_GetMouseX(void* CPlayer)

@@ -135,6 +135,8 @@ public:
 	unsigned char GetTeam() { return sPlayer_GetTeam(this->cplayer); }
 	float GetX() { return sPlayer_GetPosX(this->cplayer); }
 	float GetY() { return sPlayer_GetPosY(this->cplayer); }
+	float GetVelX() { return sPlayer_GetVelX(this->cplayer); }
+	float GetVelY() { return sPlayer_GetVelY(this->cplayer); }
 	float GetMouseX() { return sPlayer_GetMouseX(this->cplayer); }
 	float GetMouseY() { return sPlayer_GetMouseY(this->cplayer); }
 	unsigned int GetIdleTime() { return sPlayer_GetIdleTime(this->cplayer); }
@@ -151,6 +153,7 @@ public:
 	void SetClantag(const char* s) { sPlayer_SetClantag(this->cplayer, s); }
 	void SetTeam(int t) { sPlayer_ChangeTeam(this->cplayer, t); }
 	void SetPosition(float x, float y) { sPlayer_SetPosition(this->cplayer, x, y); }
+	void SetVelocity(float vx, float vy) { sPlayer_SetVelocity(this->cplayer, vx, vy); }
 	void SetHealth(float health) { sPlayer_SetHealth(this->cplayer, health); }
 	void SetDefaultHealth(float health) { sPlayer_SetDefaultHealth(this->cplayer, health); }
 	void SetBombs(unsigned char i) { sPlayer_SetBombs(this->cplayer, i); }
