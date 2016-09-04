@@ -1388,6 +1388,7 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetHealth", &ProxyBlob::GetHealth)
 		.method("SetHealth", &ProxyBlob::SetHealth)
 		.method("GetPlayer", &ProxyBlob::GetPlayer)
+		.method("IsFacingLeft", &ProxyBlob::IsFacingLeft)
 		.method("Kill", &ProxyBlob::Kill)
 	.end();
 	

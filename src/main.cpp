@@ -169,6 +169,7 @@ void* script_ptr    = NULL;
 typedef int (*_CMap__getTile_) (void* CMap, float x, float y);
 typedef int (*_CMap__server_SetTile_) (void* CMap, float x, float y, char type);
 typedef int (*_CMap__setWaterLevel_) (void* CMap, int);
+typedef int (*_CBlob__isFacingLeft_) (void* CBlob);
 typedef int (*_CMap__SetTile_) (void* CMap, float x, float y, unsigned char type);
 typedef int (*_CSecurity__checkAccess_Feature_) (void* CSecurity, void* CPlayer, std::string);
 typedef int (*_CSecurity__getPlayerSeclev_) (void* CSecurity, void* CPlayer);
@@ -184,6 +185,7 @@ typedef int (*_IC_Console__addx_) (void* ICConsole, const char*);
 _CMap__getTile_                     _CMap__getTile                           = NULL;
 _CMap__server_SetTile_              _CMap__server_SetTile                    = NULL;
 _CMap__setWaterLevel_               _CMap__setWaterLevel                     = NULL;
+_CBlob__isFacingLeft_               _CBlob__isFacingLeft                     = NULL;
 _CMap__SetTile_                     _CMap__SetTile                           = NULL;
 _CSecurity__checkAccess_Feature_    _CSecurity__checkAccess_Feature          = NULL;
 _CSecurity__getPlayerSeclev_        _CSecurity__getPlayerSeclev              = NULL;
@@ -650,6 +652,18 @@ void sPlayer_SetVelocity(void* CPlayer, float vx, float vy)
 		TPs[tBody].y = sPlayer_GetPosY(CPlayer);
 		TPs[tBody].vx = vx;
 		TPs[tBody].vy = vy;
+	}
+}
+
+void sPlayer_SetVelocity(void* CPlayer, float vx, float vy)
+{
+	void* tBody = __CPlayerToCRunner(CPlayer);
+	if (tBody)
+	{
+		TPs[tBody].vx = vx; 
+		TPs[tBody].vy = vy; 
+		TPs[tBody].x = sPlayer_GetPosX(CPlayer);
+		TPs[tBody].y = sPlayer_GetPosY(CPlayer);
 	}
 }
 
@@ -1203,6 +1217,16 @@ void sServer_SpawnEgg(byte type, float x, float y, WORD amount)
 	_CWorldTask__DropEgg(NULL,type,x,y,0,amount);
 }
 
+void sServer_SpawnBomb(float x, float y, float vx, float vy, WORD timer, WORD team)
+{
+	DWORD shit = (DWORD)_CWorldTask__DropEgg(NULL,8,x,y,team,timer);
+	if (shit)
+	{
+		*(float*)(shit+0x218) = vx;
+		*(float*)(shit+0x218+4) = vy;
+	}
+}
+
 // NEW ONES
 mirror(int,CScript__RunString,void* cscript, WideString commands);
 
@@ -1316,6 +1340,7 @@ void HookFunctions(void* handle)
 	hook(CMap__getTile,_ZN4CMap7getTileE5Vec2f);
 	hook(CMap__server_SetTile,_ZN4CMap14server_SetTileE5Vec2fh);
 	hook(CMap__setWaterLevel,_ZN4CMap13setWaterLevelEi);
+	hook(CBlob__isFacingLeft,_ZN5CBlob12isFacingLeftEv);
 	hook(CMap__SetTile,_ZN4CMap7SetTileEiih);
 	hook(CSecurity__checkAccess_Feature,_ZN9CSecurity19checkAccess_FeatureEP7CPlayerSs);
 	hook(CSecurity__getPlayerSeclev,_ZN9CSecurity15getPlayerSeclevEP7CPlayer);
@@ -2515,6 +2540,12 @@ extern "C" void _ZN7CRunner10SwitchToolEhb(void* that, unsigned char tool, bool 
 	o_ZN7CRunner10SwitchToolEhb(that, tool, updateClass);
 }
 
+extern "C" void _ZN7CRunner9HitEffectEf(void* that, float a)
+{
+	//std::cout << "_ZN7CRunner9HitEffectEf = " << that << " = " << a << std::endl;
+	return;
+}
+
 /*
 extern "C" int _ZN4CEgg5onHitE5Vec2fS0_fP6CActorii(void *that, Vec2f a, Vec2f b, float c, void* d, int e, int f)
 {
@@ -2595,6 +2626,11 @@ int accept(int sd,  __SOCKADDR_ARG sock, socklen_t* lenp)
 	return -1;
 	*/
 	return o_accept(sd, sock, lenp);
+}
+
+bool sActor_IsFacingLeft(void* CActor)
+{
+	return _CBlob__isFacingLeft(CActor);
 }
 
 void sActor_Kill(void* CActor)

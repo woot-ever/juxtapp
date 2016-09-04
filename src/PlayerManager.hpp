@@ -66,6 +66,7 @@ public:
 	float GetHealth();
 	void SetHealth(float health);
 	std::shared_ptr<ProxyPlayer> GetPlayer();
+	bool IsFacingLeft();
 	void Kill();
 };
 
@@ -504,6 +505,9 @@ std::shared_ptr<ProxyPlayer> ProxyBlob::GetPlayer() {
 	if (!PlayerPTR) return nullptr;
 	unsigned int PlayerID = (*(unsigned short int*)(PlayerPTR+120));
 	return PlayerManager::Get()->GetPlayerByID(PlayerID);
+}
+bool ProxyBlob::IsFacingLeft() {
+	return sActor_IsFacingLeft(this->cactor);
 }
 void ProxyBlob::Kill() {
 	sActor_Kill(this->cactor);
