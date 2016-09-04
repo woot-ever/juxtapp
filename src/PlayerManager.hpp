@@ -190,6 +190,7 @@ public:
 	bool IsShieldingUp() { return sPlayer_IsShieldingUp(this->cplayer); }
 	bool IsShieldingDown() { return sPlayer_IsShieldingDown(this->cplayer); }
 	bool IsShieldingSide() { return sPlayer_IsShieldingSide(this->cplayer); }
+	bool IsFrozen() { return sPlayer_IsFrozen(this->cplayer); }
 	
 	bool HasFeature(const char* feature) { return sPlayer_CheckFeature(this->cplayer, feature); }
 	bool HasCommand(const char* command) { return sPlayer_CheckCommand(this->cplayer, command); }

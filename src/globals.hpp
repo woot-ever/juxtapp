@@ -91,6 +91,7 @@ extern bool  sPlayer_IsJumping       (void* CPlayer);
 extern bool  sPlayer_IsShieldingUp   (void* CPlayer);
 extern bool  sPlayer_IsShieldingDown (void* CPlayer);
 extern bool  sPlayer_IsShieldingSide (void* CPlayer);
+extern bool  sPlayer_IsFrozen        (void* CPlayer);
 extern void  sPlayer_ForceHead       (void* CPlayer, byte head);
 extern byte  sPlayer_GetHead         (void* CPlayer);
 

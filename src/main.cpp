@@ -1168,6 +1168,12 @@ bool sPlayer_IsShieldingSide(void* player)
 	return *(byte*)((DWORD)runner+714) == 1;
 }
 
+bool sPlayer_IsFrozen(void* player)
+{
+	if (!player) return false;
+	return *(bool*)((DWORD)cplaye+508);
+}
+
 bool sPlayer_CheckFeature(void* CPlayer, const char* feature)
 {
 	if (!CPlayer) return false;
