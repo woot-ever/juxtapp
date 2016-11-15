@@ -1546,7 +1546,6 @@ extern "C" void _ZN5CBlobD2Ev(void* that)
 
 extern "C" void _ZN5CBlob4LoadEv(void* that)
 {
-	std::cout << "_ZN5CBlob4LoadEv " << that << std::endl;
 	o_ZN5CBlob4LoadEv(that);
 	
 	auto pa = std::make_shared<ProxyBlob>(that);

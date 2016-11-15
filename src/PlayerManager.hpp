@@ -52,7 +52,6 @@ public:
 		this->cactor = p;
 		this->_exists = true;
 		this->id = p ? (*(unsigned short int*)((unsigned int)p+184)) : 0;
-		//std::cout << "ProxyBlob::ProxyBlob, cactor pointer = " << this->cactor << std::endl;
 	}
 	~ProxyBlob() {}
 	bool exists() { return this->_exists; }

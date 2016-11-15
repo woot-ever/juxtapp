@@ -707,7 +707,6 @@ void PluginManager::OnPlayerInit(std::shared_ptr<ProxyPlayer> player)
 
 void PluginManager::OnBlobInit(std::shared_ptr<ProxyBlob> actor)
 {
-	//std::cout << "PluginManager::OnBlobInit" << std::endl;
 	for (std::shared_ptr<Plugin> p : this->plugins)
 	{
 		if (!p->state.globalExists("OnBlobInit")) continue;
