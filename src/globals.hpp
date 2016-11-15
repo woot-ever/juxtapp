@@ -76,8 +76,9 @@ extern byte  sPlayer_GetBombs           (void* CPlayer);
 extern float sPlayer_GetHealth          (void* CPlayer);
 extern float sPlayer_GetDefaultHealth   (void* CPlayer);
 
-extern bool sActor_IsFacingLeft  (void* CActor);
+extern bool  sActor_IsFacingLeft (void* CActor);
 extern void  sActor_Kill         (void* CActor);
+extern void  sActor_SetPosition  (void* CPlayer, float x, float y);
 
 // new!
 extern void  sPlayer_ChangeTeam      (void* CPlayer, DWORD team);

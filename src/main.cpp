@@ -2635,3 +2635,9 @@ void sActor_Kill(void* CActor)
 	if (!CActor) return;
 	o_ZN6CActor4KillEv(CActor);
 }
+
+void sActor_SetPosition(void* CActor, float x, float y)
+{
+	if (!CActor) return;
+	_CBlob__setPosition(CActor, x, y);
+}

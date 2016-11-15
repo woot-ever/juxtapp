@@ -64,6 +64,7 @@ public:
 	unsigned char GetTeam();
 	float GetX();
 	float GetY();
+	void SetPosition(float x, float y);
 	float GetHealth();
 	void SetHealth(float health);
 	std::shared_ptr<ProxyPlayer> GetPlayer();
@@ -556,6 +557,9 @@ float ProxyBlob::GetX() {
 float ProxyBlob::GetY() {
 	void* pSprite = (void*)(*(unsigned int*)((unsigned int)this->cactor+536));
 	return pSprite ? (*(float*)((unsigned int)pSprite+12)) : 0.f;
+}
+void ProxyBlob::SetPosition(float x, float y) {
+	sActor_SetPosition(this->cactor, x, y);
 }
 float ProxyBlob::GetHealth() {
 	return (*(float*)((unsigned int)this->cactor+196));
