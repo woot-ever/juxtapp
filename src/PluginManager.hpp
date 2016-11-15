@@ -1020,10 +1020,11 @@ bool PluginManager::OnPlayerBuild(std::shared_ptr<ProxyPlayer> player, float x, 
 	for (std::shared_ptr<Plugin> p : this->pluginsOnPlayerBuild)
 	{
 		this->currentPlugin = p;
-		ret = p->state.invokeFunction<int>("OnPlayerBuild", player, x, y, block);
-		if (ret == 0)
-		{
-			return false;
+		try {
+			ret = p->state.invokeFunction<int>("OnPlayerBuild", player, x, y, block);
+			if (ret == 0) return false;
+		} catch (...) {
+			PluginManager::Get()->Panic();
 		}
 	}
 	return true;
@@ -1064,10 +1065,11 @@ bool PluginManager::OnMapReceiveTile(std::shared_ptr<ProxyPlayer> player, float 
 	for (std::shared_ptr<Plugin> p : this->pluginsOnMapReceiveTile)
 	{
 		this->currentPlugin = p;
-		ret = p->state.invokeFunction<int>("OnMapReceiveTile", player, x, y, block);
-		if (ret == 0)
-		{
-			return false;
+		try {
+			ret = p->state.invokeFunction<int>("OnMapReceiveTile", player, x, y, block);
+			if (ret == 0) return false;
+		} catch (...) {
+			PluginManager::Get()->Panic();
 		}
 	}
 	return true;
