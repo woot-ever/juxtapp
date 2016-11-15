@@ -105,7 +105,7 @@ extern void  sPlayer_SetClass    (void* CPlayer, byte _class);
 extern void  sPlayer_ShootArrow  (void* CPlayer, float x, float y, unsigned char angle, unsigned char power, bool RealDamage);
 // new!
 extern DWORD sServer_GetUnits    (byte team);
-extern void  sServer_SpawnEgg    (byte type, float x, float y, WORD amount);
+extern DWORD sServer_SpawnEgg    (byte type, float x, float y, WORD amount, WORD team);
 extern void  sServer_SpawnBomb   (float x, float y, float vx, float vy, WORD timer, WORD team);
 extern void  sPlayer_SetClantag  (void* CPlayer, const char* name);
 extern void  sPlayer_SetPosition (void* CPlayer, float x, float y);

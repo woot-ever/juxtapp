@@ -16,6 +16,7 @@
 
 class ProxyPlayer;
 class ProxyBlob;
+class ProxyEgg;
 class ProxyActor;
 class PlayerManager;
 
@@ -67,6 +68,25 @@ public:
 	void SetHealth(float health);
 	std::shared_ptr<ProxyPlayer> GetPlayer();
 	bool IsFacingLeft();
+	void Kill();
+};
+
+class ProxyEgg
+{
+public:
+	void *cactor;
+	unsigned int id;
+	bool _exists;
+	
+	ProxyEgg(void* p)
+	{
+		this->cactor = p;
+		this->_exists = true;
+		this->id = p ? (*(unsigned short int*)((unsigned int)p+184)) : 0;
+	}
+	~ProxyEgg() {}
+	bool exists() { return this->_exists; }
+	
 	void Kill();
 };
 
@@ -230,6 +250,7 @@ public:
 	
 	std::vector<std::shared_ptr<ProxyPlayer>> players;
 	std::vector<std::shared_ptr<ProxyBlob>> blobs;
+	std::vector<std::shared_ptr<ProxyEgg>> eggs;
 	
 	PlayerManager();
 	~PlayerManager();
@@ -239,6 +260,9 @@ public:
 	
 	void AddBlob(std::shared_ptr<ProxyBlob>);
 	void RemoveBlob(std::shared_ptr<ProxyBlob>);
+	
+	void AddEgg(std::shared_ptr<ProxyEgg>);
+	void RemoveEgg(std::shared_ptr<ProxyEgg>);
 	
 	//std::list<std::shared_ptr<ProxyPlayer>> GetPlayers();
 	//std::list<std::shared_ptr<ProxyPlayer>> GetPlayersBySeclev(unsigned int);
@@ -251,6 +275,10 @@ public:
 	std::shared_ptr<ProxyBlob> GetBlobByID(unsigned int);
 	std::shared_ptr<ProxyBlob> GetBlobByIndex(unsigned int);
 	unsigned int GetBlobsCount();
+
+	std::shared_ptr<ProxyEgg> GetEggByID(unsigned int);
+	std::shared_ptr<ProxyEgg> GetEggByIndex(unsigned int);
+	unsigned int GetEggsCount();
 	
 	void SpeedHackCheck(unsigned int);
 	void AttackHackCheck(unsigned int);
@@ -367,6 +395,12 @@ void PlayerManager::AddBlob(std::shared_ptr<ProxyBlob> blob)
 	this->blobs.push_back(blob);
 }
 
+void PlayerManager::AddEgg(std::shared_ptr<ProxyEgg> egg)
+{
+	if (!egg) return;
+	this->eggs.push_back(egg);
+}
+
 void PlayerManager::RemovePlayer(std::shared_ptr<ProxyPlayer> player)
 {
 	this->players.erase(std::remove_if(this->players.begin(), this->players.end(), [](std::shared_ptr<ProxyPlayer> &p)
@@ -381,6 +415,14 @@ void PlayerManager::RemoveBlob(std::shared_ptr<ProxyBlob> blob)
 	{
 		return !o->exists();
 	}), this->blobs.end());
+}
+
+void PlayerManager::RemoveEgg(std::shared_ptr<ProxyEgg> egg)
+{
+	this->eggs.erase(std::remove_if(this->eggs.begin(), this->eggs.end(), [](std::shared_ptr<ProxyEgg> &o)
+	{
+		return !o->exists();
+	}), this->eggs.end());
 }
 
 /*std::list<std::shared_ptr<ProxyPlayer>> PlayerManager::GetPlayers()
@@ -448,9 +490,23 @@ std::shared_ptr<ProxyBlob> PlayerManager::GetBlobByID(unsigned int id)
 	return std::shared_ptr<ProxyBlob>(nullptr);
 }
 
+std::shared_ptr<ProxyEgg> PlayerManager::GetEggByID(unsigned int id)
+{
+	for (auto &o : this->eggs)
+	{
+		if (o->id == id) return o;
+	}
+	return std::shared_ptr<ProxyEgg>(nullptr);
+}
+
 unsigned int PlayerManager::GetBlobsCount()
 {
 	return this->blobs.size();
+}
+
+unsigned int PlayerManager::GetEggsCount()
+{
+	return this->eggs.size();
 }
 
 std::shared_ptr<ProxyBlob> PlayerManager::GetBlobByIndex(unsigned int index)
@@ -458,6 +514,13 @@ std::shared_ptr<ProxyBlob> PlayerManager::GetBlobByIndex(unsigned int index)
 	// index starts at 1 in Lua
 	if (index < 1 || index > this->blobs.size()) return nullptr;
 	return this->blobs[index-1];
+}
+
+std::shared_ptr<ProxyEgg> PlayerManager::GetEggByIndex(unsigned int index)
+{
+	// index starts at 1 in Lua
+	if (index < 1 || index > this->eggs.size()) return nullptr;
+	return this->eggs[index-1];
 }
 
 ////////////////////
@@ -511,6 +574,13 @@ bool ProxyBlob::IsFacingLeft() {
 	return sActor_IsFacingLeft(this->cactor);
 }
 void ProxyBlob::Kill() {
+	sActor_Kill(this->cactor);
+}
+
+////////////////////
+////////////////////
+
+void ProxyEgg::Kill() {
 	sActor_Kill(this->cactor);
 }
 

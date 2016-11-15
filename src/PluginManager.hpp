@@ -144,6 +144,21 @@ public:
 		return PlayerManager::Get()->GetBlobsCount();
 	}
 	
+	static std::shared_ptr<ProxyEgg> GetEggByID(unsigned int id)
+	{
+		return PlayerManager::Get()->GetEggByID(id);
+	}
+	
+	static std::shared_ptr<ProxyEgg> GetEggByIndex(unsigned int index)
+	{
+		return PlayerManager::Get()->GetEggByIndex(index);
+	}
+	
+	static unsigned int GetEggsCount()
+	{
+		return PlayerManager::Get()->GetEggsCount();
+	}
+	
 	static void SendRcon(const char* cmd)
 	{
 		if (cmd[0] == '/' || cmd[0] == '\\')
@@ -226,9 +241,12 @@ public:
 		
 	}
 	
-	static void SpawnEgg(unsigned int type, float x, float y, unsigned short int amount)
+	static std::shared_ptr<ProxyEgg> SpawnEgg(unsigned int type, float x, float y, unsigned short int amount, unsigned short int team)
 	{
-		sServer_SpawnEgg(type, x, y, amount);
+		unsigned int tempy = sServer_SpawnEgg(type, x, y, amount, team);
+		if (!tempy) return NULL;
+		unsigned short networkid = (unsigned short)(*(unsigned int*)((unsigned int)tempy+184));
+		return PlayerManager::Get()->GetEggByID(networkid);
 	}
 	
 	static void SpawnBomb(float x, float y, float vx, float vy, unsigned short int timer, unsigned short int team)
@@ -380,6 +398,7 @@ public:
 	void OnServerReady();
 	void OnPlayerInit(std::shared_ptr<ProxyPlayer>);
 	void OnBlobInit(std::shared_ptr<ProxyBlob>);
+	void OnEggInit(std::shared_ptr<ProxyEgg>);
 	
     static PluginManager *Get()
     {
@@ -559,6 +578,10 @@ void PluginManager::ReloadAll()
 	{
 		PluginManager::OnBlobInit(pa);
 	}
+	for (auto &pa : PlayerManager::Get()->eggs)
+	{
+		PluginManager::OnEggInit(pa);
+	}
 }
 
 void PluginManager::UnloadPlugin(std::string name)
@@ -691,6 +714,20 @@ void PluginManager::OnBlobInit(std::shared_ptr<ProxyBlob> actor)
 		this->currentPlugin = p;
 		try {
 			p->state.invokeVoidFunction("OnBlobInit", actor);
+		} catch (...) {
+			PluginManager::Get()->Panic();
+		}
+	}
+}
+
+void PluginManager::OnEggInit(std::shared_ptr<ProxyEgg> egg)
+{
+	for (std::shared_ptr<Plugin> p : this->plugins)
+	{
+		if (!p->state.globalExists("OnEggInit")) continue;
+		this->currentPlugin = p;
+		try {
+			p->state.invokeVoidFunction("OnEggInit", egg);
 		} catch (...) {
 			PluginManager::Get()->Panic();
 		}
@@ -1392,6 +1429,10 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("Kill", &ProxyBlob::Kill)
 	.end();
 	
+	this->state.Class<ProxyEgg>("Egg")
+		.method("Kill", &ProxyEgg::Kill)
+	.end();
+	
 	this->state.Class<ProxyPlayer>("Player")
 		.method("GetID", &ProxyPlayer::GetID)
 		.method("GetBlob", &ProxyPlayer::GetBlob)
@@ -1509,6 +1550,9 @@ Plugin::Plugin(std::string name, std::string path)
 		.method("GetBlobByID", &ProxyKAG::GetBlobByID)
 		.method("GetBlobByIndex", &ProxyKAG::GetBlobByIndex)
 		.method("GetBlobsCount", &ProxyKAG::GetBlobsCount)
+		.method("GetEggByID", &ProxyKAG::GetEggByID)
+		.method("GetEggByIndex", &ProxyKAG::GetEggByIndex)
+		.method("GetEggsCount", &ProxyKAG::GetEggsCount)
 		.method("SendRcon", &ProxyKAG::SendRcon)
 		.method("NextMap", &ProxyKAG::NextMap)
 		.method("RestartMap", &ProxyKAG::RestartMap)

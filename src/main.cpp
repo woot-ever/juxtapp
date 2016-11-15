@@ -116,12 +116,11 @@ static void* (*o_ZN4CEgg7UnMountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner5MountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN7CRunner7UnMountEP6CActor) (void*, void*) = 0;
 static void* (*o_ZN4CMap12CollapseTileEi) (void*, int) = 0;
-static void* (*o_ZN5CBlobC1EPKc) (void*, const char*) = 0;
-static void* (*o_ZN5CBlobC2EPKc) (void*, const char*) = 0;
 static void* (*o_ZN5CBlob4LoadEv) (void*) = 0;
 static void* (*o_ZN5CBlobD0Ev) (void*) = 0;
 static void* (*o_ZN5CBlobD1Ev) (void*) = 0;
 static void* (*o_ZN5CBlobD2Ev) (void*) = 0;
+static void* (*o_ZN4CEgg4LoadEv) (void*) = 0;
 static void* (*o_ZN6CActor11CreateActorEPKcS1_iS1_) (const char*, const char*, int, const char*) = 0;
 static void* (*o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer) (void*, const char*, unsigned char, void*) = 0;
 static void* (*o_ZN6CActor7DestroyEv) (void*) = 0;
@@ -652,18 +651,6 @@ void sPlayer_SetVelocity(void* CPlayer, float vx, float vy)
 		TPs[tBody].y = sPlayer_GetPosY(CPlayer);
 		TPs[tBody].vx = vx;
 		TPs[tBody].vy = vy;
-	}
-}
-
-void sPlayer_SetVelocity(void* CPlayer, float vx, float vy)
-{
-	void* tBody = __CPlayerToCRunner(CPlayer);
-	if (tBody)
-	{
-		TPs[tBody].vx = vx; 
-		TPs[tBody].vy = vy; 
-		TPs[tBody].x = sPlayer_GetPosX(CPlayer);
-		TPs[tBody].y = sPlayer_GetPosY(CPlayer);
 	}
 }
 
@@ -1218,21 +1205,6 @@ void sPlayer_Mount(void* cplayer, void* cactor)
 mirror(void*,CWorldTask__DropEgg,void* cworldtask, byte style, float x, float y, char idk, WORD amount);
 mirror(void,CBlob__setPosition,void* cblob,float x, float y);
 
-void sServer_SpawnEgg(byte type, float x, float y, WORD amount)
-{
-	_CWorldTask__DropEgg(NULL,type,x,y,0,amount);
-}
-
-void sServer_SpawnBomb(float x, float y, float vx, float vy, WORD timer, WORD team)
-{
-	DWORD shit = (DWORD)_CWorldTask__DropEgg(NULL,8,x,y,team,timer);
-	if (shit)
-	{
-		*(float*)(shit+0x218) = vx;
-		*(float*)(shit+0x218+4) = vy;
-	}
-}
-
 // NEW ONES
 mirror(int,CScript__RunString,void* cscript, WideString commands);
 
@@ -1402,12 +1374,11 @@ void HookFunctions(void* handle)
 	o_ZN7CRunner5MountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN7CRunner5MountEP6CActor");
 	o_ZN7CRunner7UnMountEP6CActor = (void*(*)(void*, void*))o_dlsym(handle, "_ZN7CRunner7UnMountEP6CActor");
 	o_ZN4CMap12CollapseTileEi = (void*(*)(void*, int))o_dlsym(handle, "_ZN4CMap12CollapseTileEi");
-	o_ZN5CBlobC1EPKc = (void*(*)(void*, const char*))o_dlsym(handle, "_ZN5CBlobC1EPKc");
-	o_ZN5CBlobC2EPKc = (void*(*)(void*, const char*))o_dlsym(handle, "_ZN5CBlobC2EPKc");
 	o_ZN5CBlob4LoadEv = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlob4LoadEv");
 	o_ZN5CBlobD0Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD0Ev");
 	o_ZN5CBlobD1Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD1Ev");
 	o_ZN5CBlobD2Ev = (void*(*)(void*))o_dlsym(handle, "_ZN5CBlobD2Ev");
+	o_ZN4CEgg4LoadEv = (void*(*)(void*))o_dlsym(handle, "_ZN4CEgg4LoadEv");
 	o_ZN6CActor11CreateActorEPKcS1_iS1_ = (void*(*)(const char*, const char*, int, const char*))o_dlsym(handle, "_ZN6CActor11CreateActorEPKcS1_iS1_");
 	o_ZN9CNetFiles8SendFileEPKchP9_ENetPeer = (void*(*)(void*, const char*, unsigned char, void*))o_dlsym(handle, "_ZN9CNetFiles8SendFileEPKchP9_ENetPeer");
 	o_ZN6CActor7DestroyEv = (void*(*)(void*))o_dlsym(handle, "_ZN6CActor7DestroyEv");
@@ -1542,18 +1513,6 @@ extern "C" void _ZN4CMap12CollapseTileEi(void* that, int xy)
 	o_ZN4CMap12CollapseTileEi(that, xy);
 }
 
-extern "C" void _ZN5CBlobC1EPKc(void* that, const char* s)
-{
-	//std::cout << "_ZN5CBlobC1EPKc " << that << " " << s << std::endl;
-	o_ZN5CBlobC1EPKc(that, s);
-}
-
-extern "C" void _ZN5CBlobC2EPKc(void* that, const char* s)
-{
-	//std::cout << "_ZN5CBlobC2EPKc " << that << " " << s << std::endl;
-	o_ZN5CBlobC2EPKc(that, s);
-}
-
 extern "C" void _ZN5CBlobD0Ev(void* that)
 {
 	//std::cout << "_ZN5CBlobD0Ev " << that << std::endl;
@@ -1593,6 +1552,15 @@ extern "C" void _ZN5CBlob4LoadEv(void* that)
 	auto pa = std::make_shared<ProxyBlob>(that);
 	PlayerManager::Get()->AddBlob(pa);
 	PluginManager::Get()->OnBlobInit(pa);
+}
+
+extern "C" void _ZN4CEgg4LoadEv(void* that)
+{
+	o_ZN4CEgg4LoadEv(that);
+	
+	auto pa = std::make_shared<ProxyEgg>(that);
+	PlayerManager::Get()->AddEgg(pa);
+	PluginManager::Get()->OnEggInit(pa);
 }
 
 extern "C" void* _ZN6CActor11CreateActorEPKcS1_iS1_(const char* a, const char* b, int c, const char* d)
@@ -2048,6 +2016,29 @@ DWORD sServer_AddBlob(const char* blobtype, const char* filepath, float x , floa
 	_CBlob__setPosition((void*)new_blob,x,y);
 	*(byte*)(new_blob+0xD4) = team;
 	return new_blob;
+}
+
+DWORD sServer_SpawnEgg(byte type, float x, float y, WORD amount, WORD team)
+{
+	DWORD new_egg = (DWORD)_CWorldTask__DropEgg(NULL, type, x, y, team, amount);
+	std::cout << "SpawnEgg " << new_egg << std::endl;
+	if ( !new_egg )
+		return 0;
+	_ZN4CEgg4LoadEv((void*)new_egg);
+	//_CBlob__setPosition((void*)new_egg,x,y);
+	//*(byte*)(new_blob+0xD4) = team;
+	return new_egg;
+	//_CWorldTask__DropEgg(NULL,type,x,y,0,amount);
+}
+
+void sServer_SpawnBomb(float x, float y, float vx, float vy, WORD timer, WORD team)
+{
+	DWORD shit = (DWORD)_CWorldTask__DropEgg(NULL,8,x,y,team,timer);
+	if (shit)
+	{
+		*(float*)(shit+0x218) = vx;
+		*(float*)(shit+0x218+4) = vy;
+	}
 }
 
 void sMap_NextMap()
