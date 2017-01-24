@@ -106,6 +106,9 @@ static void* (*o_ZN4CNet10RecdDeltasER10CBitStreamP10CStatePump) (void*, void*, 
 static void* (*o_ZN10CWorldTask5StartEv) (void*) = 0;
 static void* (*o_ZN6CRules5ThinkEv) (void*) = 0;
 static void* (*o_ZN4CMap7LoadMapEPKcb) (void*, char*) = 0;
+//
+static void* (*o_ZN10CWorldTask9SaveWorldEPKc) (void*, const char*) = 0;
+//
 static void* (*o_ZN4CMap7InitMapEv) (void*) = 0;
 static void* (*o_ZN4CNet23server_ProcessAPIPlayerEP9APIPlayerP13CSecurityData18APIRequestStatus_t) (void*, APIPlayer*, void*, int) = 0;
 static void* (*o_ZN7CRunner9ThrowSackEiRhfi) (void*, int, unsigned char &, float, int) = 0;
@@ -1340,6 +1343,9 @@ void HookFunctions(void* handle)
 	// sendrespawn only gives text on players screen without respawning at all
 
 	o_ZN4CMap7LoadMapEPKcb = (void*(*)(void* that, char* mapname))o_dlsym(handle, "_ZN4CMap7LoadMapEPKcb");
+	//
+	o_ZN10CWorldTask9SaveWorldEPKc = (void*(*)(void* that, const char* mapname))o_dlsym(handle, "_ZN10CWorldTask9SaveWorldEPKc");
+	//
 	o_CRunnerBuild = (void*(*)(void *, Vec2f, unsigned char))o_dlsym(handle, "_ZN7CRunner5BuildE5Vec2fh");
 	o_ZN7CRunner9FireArrowE5Vec2fhh = (bool(*)(void*, float, float, unsigned char, unsigned char))o_dlsym(handle, "_ZN7CRunner9FireArrowE5Vec2fhh");
 	o_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream = (int(*)(void*,bool,void*,void*))o_dlsym(handle, "_ZN4CNet20ReadPacketInSnapshotEbP10CStatePumpR10CBitStream");
@@ -2090,6 +2096,17 @@ extern "C" void* _ZN4CMap7LoadMapEPKcb(void* that, char* mapname)
 	PluginManager::Get()->OnMapChange(mapname);
 	
 	return o_ZN4CMap7LoadMapEPKcb(that,mapname);
+}
+
+extern "C" void* _ZN10CWorldTask9SaveWorldEPKc(void* that, const char* mapname)
+{
+	if (!mapptr) mapptr = that;
+	
+	PluginManager::Get()->OnMapSave(mapname);
+	
+	//std::cout << mapname << std::endl;
+	
+	return o_ZN10CWorldTask9SaveWorldEPKc(that,mapname);
 }
 
 DWORD sPlayer_GetID(void* CPlayer)
