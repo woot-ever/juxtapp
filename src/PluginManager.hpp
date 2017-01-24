@@ -346,6 +346,7 @@ public:
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMatchEnd;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMatchStart;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapChange;
+	std::vector<std::shared_ptr<Plugin>> pluginsOnMapSave;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapReceiveTile;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnMapCollapseTile;
 	std::vector<std::shared_ptr<Plugin>> pluginsOnUnload;
@@ -386,6 +387,7 @@ public:
 	bool OnPlayerBuild(std::shared_ptr<ProxyPlayer>, float, float, unsigned char);
 	int OnPlayerDrop(std::shared_ptr<ProxyPlayer>, int, int, float);
 	void OnMapChange(char*);
+	void OnMapSave(const char*);
 	bool OnMapReceiveTile(std::shared_ptr<ProxyPlayer>, float, float, unsigned char);
 	bool OnMapCollapseTile(float, float, unsigned char);
 	bool OnPlayerShotArrow(std::shared_ptr<ProxyPlayer>, float, float, unsigned char, unsigned char);
@@ -544,6 +546,7 @@ void PluginManager::UnloadAll()
 	this->pluginsOnMatchStart.clear();
 	this->pluginsOnMatchEnd.clear();
 	this->pluginsOnMapChange.clear();
+	this->pluginsOnMapSave.clear();
 	this->pluginsOnMapReceiveTile.clear();
 	this->pluginsOnMapCollapseTile.clear();
 	this->pluginsOnPlayerShotArrow.clear();
@@ -669,6 +672,7 @@ void PluginManager::LoadPlugin(std::string name)
 		if (plugin->state.globalExists("OnMatchStart")) this->pluginsOnMatchStart.push_back(plugin);
 		if (plugin->state.globalExists("OnMatchEnd")) this->pluginsOnMatchEnd.push_back(plugin);
 		if (plugin->state.globalExists("OnMapChange")) this->pluginsOnMapChange.push_back(plugin);
+		if (plugin->state.globalExists("OnMapSave")) this->pluginsOnMapSave.push_back(plugin);
 		if (plugin->state.globalExists("OnMapReceiveTile")) this->pluginsOnMapReceiveTile.push_back(plugin);
 		if (plugin->state.globalExists("OnMapCollapseTile")) this->pluginsOnMapCollapseTile.push_back(plugin);
 		if (plugin->state.globalExists("OnUnload")) this->pluginsOnUnload.push_back(plugin);
@@ -1052,6 +1056,19 @@ void PluginManager::OnMapChange(char* mapname)
 		this->currentPlugin = p;
 		try {
 			p->state.invokeVoidFunction("OnMapChange", (const char*)mapname);
+		} catch (...) {
+			PluginManager::Get()->Panic();
+		}
+	}
+}
+
+void PluginManager::OnMapSave(const char* mapname)
+{
+	for (std::shared_ptr<Plugin> p : this->pluginsOnMapSave)
+	{
+		this->currentPlugin = p;
+		try {
+			p->state.invokeVoidFunction("OnMapSave", mapname);
 		} catch (...) {
 			PluginManager::Get()->Panic();
 		}
